@@ -13,6 +13,7 @@ import {
   ChevronUp,
   AlertTriangle
 } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { useWalletStatus, useAccounts, useCreateAccount, useDeleteAccount, useResetWallet } from "@/hooks/useWallet";
 import { copyToClipboard } from "@/lib/utils";
@@ -203,12 +204,8 @@ export default function Dashboard() {
         </nav>
 
         <div className="flex items-center gap-4">
-          {/* Dark Mode Toggle Mockup */}
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <span className="h-4 w-4 rounded-full border border-current opacity-50"></span>
-            <div className="w-8 h-4 bg-muted rounded-full relative"><div className="absolute left-0.5 top-0.5 h-3 w-3 bg-background rounded-full shadow-sm"></div></div>
-            <span className="h-4 w-4 rounded-full border border-current opacity-50"></span>
-          </div>
+          {/* Dark/Light Mode Toggle */}
+          <ThemeToggle />
         </div>
       </header>
 

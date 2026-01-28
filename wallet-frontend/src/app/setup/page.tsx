@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, Key, Download, Eye, EyeOff, ArrowLeft, Copy, Check, ChevronRight } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 import { useWalletStatus, useCreateWallet, useImportWallet, useUnlockWallet, useCreateAccount } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/button";
@@ -106,21 +107,17 @@ export default function SetupPage() {
       <div className="absolute top-0 left-0 w-full p-8 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 flex items-center justify-center">
-            {/* Simple Box Logo - Matches Kosh Site */}
+            {/* Hexagon Logo */}
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xl font-bold">Kosh</span>
+            <span className="text-xl font-bold">Valtix</span>
             <span className="text-xs font-mono border border-border px-1.5 py-0.5 rounded-sm text-muted-foreground">v1.3</span>
           </div>
         </div>
 
-        {/* Theme Toggle Placeholder */}
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <span className="h-4 w-4 rounded-full border border-current opacity-50"></span>
-          <div className="w-8 h-4 bg-muted rounded-full relative"><div className="absolute left-0.5 top-0.5 h-3 w-3 bg-background rounded-full shadow-sm"></div></div>
-          <span className="h-4 w-4 rounded-full border border-current opacity-50"></span>
-        </div>
+        {/* Theme Toggle */}
+        <ThemeToggle />
       </div>
 
       <AnimatePresence mode="wait">
@@ -239,7 +236,7 @@ export default function SetupPage() {
                 </div>
                 <h1 className="text-2xl font-bold mb-2">Welcome Back</h1>
                 <p className="text-muted-foreground">
-                  Enter your password to unlock Kosh.
+                  Enter your password to unlock Valtix.
                 </p>
               </div>
               <div className="space-y-4">
