@@ -71,9 +71,10 @@ export function useAccounts() {
     queryFn: async () => {
       const accounts = await accountsApi.list();
       setAccounts(accounts);
-      // Auto-select first account if none selected
+      // Auto-select first Solana account if none selected (prefer Solana for swap compatibility)
       if (!selectedAccount && accounts.length > 0) {
-        selectAccount(accounts[0]);
+        const solanaAccount = accounts.find(a => a.chain === "solana");
+        selectAccount(solanaAccount || accounts[0]);
       }
       return accounts;
     },

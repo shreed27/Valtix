@@ -4,11 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, Send, Loader2, ExternalLink } from "lucide-react";
+import { ArrowLeft, Send, Loader2, ExternalLink, ChevronDown } from "lucide-react";
 
 import { useWalletStore } from "@/hooks/useWalletStore";
-import { useSelectedAccountBalance } from "@/hooks/useWallet";
-import { transactionApi } from "@/lib/api";
+import { useAccounts, useBalance } from "@/hooks/useWallet";
+import { transactionApi, type Account } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,13 +16,18 @@ import { truncateAddress, formatBalance, getExplorerUrl } from "@/lib/utils";
 
 export default function SendPage() {
   const router = useRouter();
-  const { selectedAccount } = useWalletStore();
-  const { data: balance } = useSelectedAccountBalance();
+  const { selectedAccount, selectAccount } = useWalletStore();
+  const { data: accounts } = useAccounts();
+  const { data: balance } = useBalance(
+    selectedAccount?.chain || "",
+    selectedAccount?.address || ""
+  );
 
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
 
   const sendMutation = useMutation({
     mutationFn: () => {
@@ -122,14 +127,54 @@ export default function SendPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* From */}
+          {/* From - Account Selector */}
           <div>
             <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">From</label>
-            <div className="p-4 rounded-lg bg-secondary mt-2 border border-border">
-              <p className="font-medium">{selectedAccount?.name}</p>
-              <p className="text-xs text-muted-foreground font-mono mt-1 break-all">
-                {truncateAddress(selectedAccount?.address || "")}
-              </p>
+            <div className="relative mt-2">
+              <button
+                type="button"
+                onClick={() => setShowAccountPicker(!showAccountPicker)}
+                className="w-full p-4 rounded-lg bg-secondary border border-border hover:border-primary/50 transition-colors text-left flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-medium">{selectedAccount?.name}</p>
+                  <p className="text-xs text-muted-foreground font-mono mt-1">
+                    {truncateAddress(selectedAccount?.address || "")}
+                  </p>
+                </div>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showAccountPicker ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Account Dropdown */}
+              {showAccountPicker && accounts && accounts.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-20 overflow-hidden">
+                  {accounts.map((account) => (
+                    <button
+                      key={account.id}
+                      type="button"
+                      onClick={() => {
+                        selectAccount(account);
+                        setShowAccountPicker(false);
+                      }}
+                      className={`w-full p-3 text-left hover:bg-secondary transition-colors flex items-center gap-3 ${
+                        selectedAccount?.id === account.id ? 'bg-secondary' : ''
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+                        account.chain === 'solana' ? 'bg-purple-500' : 'bg-blue-500'
+                      }`}>
+                        {account.chain === 'solana' ? 'SOL' : 'ETH'}
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{account.name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {truncateAddress(account.address)}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

@@ -195,6 +195,7 @@ export default function Dashboard() {
         {/* Navigation - Restored for feature visibility */}
         <nav className="hidden md:flex items-center gap-6">
           <Link href="/send" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Send</Link>
+          <Link href="/receive" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Receive</Link>
           <Link href="/swap" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Swap</Link>
           <Link href="/nfts" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">NFTs</Link>
           <Link href="/contacts" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Contacts</Link>

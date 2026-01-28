@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowUpDown, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowUpDown, Loader2, RefreshCw, ChevronDown } from "lucide-react";
 
 import { useWalletStore } from "@/hooks/useWalletStore";
-import { useSelectedAccountBalance } from "@/hooks/useWallet";
+import { useAccounts, useBalance } from "@/hooks/useWallet";
 import { swapApi, type SwapQuote } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { formatBalance } from "@/lib/utils";
+import { formatBalance, truncateAddress } from "@/lib/utils";
 
 // Token mints
 const SOL_MINT = "So11111111111111111111111111111111111111112";
@@ -20,8 +20,12 @@ const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 export default function SwapPage() {
   const router = useRouter();
-  const { selectedAccount } = useWalletStore();
-  const { data: balance } = useSelectedAccountBalance();
+  const { selectedAccount, selectAccount } = useWalletStore();
+  const { data: accounts } = useAccounts();
+  const { data: balance } = useBalance(
+    selectedAccount?.chain || "",
+    selectedAccount?.address || ""
+  );
 
   const [inputAmount, setInputAmount] = useState("");
   const [swapDirection, setSwapDirection] = useState<"sol_to_usdc" | "usdc_to_sol">(
@@ -29,6 +33,17 @@ export default function SwapPage() {
   );
   const [quote, setQuote] = useState<SwapQuote | null>(null);
   const [error, setError] = useState("");
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+
+  // Get Solana accounts only for swap
+  const solanaAccounts = accounts?.filter(a => a.chain === "solana") || [];
+
+  // Auto-select first Solana account if current selection is not Solana
+  useEffect(() => {
+    if (selectedAccount?.chain !== "solana" && solanaAccounts.length > 0) {
+      selectAccount(solanaAccounts[0]);
+    }
+  }, [selectedAccount, solanaAccounts, selectAccount]);
 
   const inputMint = swapDirection === "sol_to_usdc" ? SOL_MINT : USDC_MINT;
   const outputMint = swapDirection === "sol_to_usdc" ? USDC_MINT : SOL_MINT;
@@ -87,7 +102,7 @@ export default function SwapPage() {
     : "0.00";
 
   // Only show swap for Solana accounts
-  if (selectedAccount?.chain !== "solana") {
+  if (solanaAccounts.length === 0) {
     return (
       <div className="min-h-screen container max-w-md mx-auto py-8">
         <Button
@@ -103,7 +118,7 @@ export default function SwapPage() {
           <CardContent className="pt-6">
             <div className="text-center py-8">
               <p className="text-muted-foreground">
-                Swap is only available for Solana accounts
+                Swap requires a Solana wallet. Please create one first.
               </p>
               <Button
                 className="mt-4"
@@ -115,7 +130,15 @@ export default function SwapPage() {
           </CardContent>
         </Card>
       </div>
+    );
+  }
 
+  // If selected account is not Solana, show loading while we auto-switch
+  if (selectedAccount?.chain !== "solana") {
+    return (
+      <div className="min-h-screen container max-w-md mx-auto py-8 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
@@ -138,6 +161,58 @@ export default function SwapPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Account Selector */}
+          {solanaAccounts.length > 1 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowAccountPicker(!showAccountPicker)}
+                className="w-full p-3 rounded-lg bg-secondary border border-border hover:border-primary/50 transition-colors text-left flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                    SOL
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">{selectedAccount?.name}</p>
+                    <p className="text-xs text-muted-foreground font-mono">
+                      {truncateAddress(selectedAccount?.address || "")}
+                    </p>
+                  </div>
+                </div>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showAccountPicker ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showAccountPicker && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-20 overflow-hidden">
+                  {solanaAccounts.map((account) => (
+                    <button
+                      key={account.id}
+                      type="button"
+                      onClick={() => {
+                        selectAccount(account);
+                        setShowAccountPicker(false);
+                      }}
+                      className={`w-full p-3 text-left hover:bg-secondary transition-colors flex items-center gap-3 ${
+                        selectedAccount?.id === account.id ? 'bg-secondary' : ''
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                        SOL
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{account.name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {truncateAddress(account.address)}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Input */}
           <div className="p-4 rounded-lg bg-secondary">
             <div className="flex items-center justify-between mb-2">
