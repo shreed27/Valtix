@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, Key, Download, Eye, EyeOff, ArrowLeft, Copy, Check, ChevronRight } from "lucide-react";
 
-import { useWalletStatus, useCreateWallet, useImportWallet, useUnlockWallet } from "@/hooks/useWallet";
+import { useWalletStatus, useCreateWallet, useImportWallet, useUnlockWallet, useCreateAccount } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { copyToClipboard } from "@/lib/utils";
@@ -16,7 +16,7 @@ export default function SetupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: status } = useWalletStatus();
-
+  // Reverting to Chain Selection first as requested
   const [step, setStep] = useState<"chain-selection" | "setup-wallet" | "unlock">("chain-selection");
   const [selectedChain, setSelectedChain] = useState<"solana" | "ethereum">("solana");
 
@@ -29,6 +29,7 @@ export default function SetupPage() {
   const createWalletMutation = useCreateWallet();
   const importWalletMutation = useImportWallet();
   const unlockMutation = useUnlockWallet();
+  const createAccountMutation = useCreateAccount();
 
   useEffect(() => {
     if (searchParams.get("unlock") === "true" && status?.has_wallet) {
@@ -41,6 +42,8 @@ export default function SetupPage() {
 
   const handleChainSelect = (chain: "solana" | "ethereum") => {
     setSelectedChain(chain);
+    // Save preference and proceed to wallet setup
+    localStorage.setItem("selected_chain", chain);
     setStep("setup-wallet");
   };
 
@@ -56,12 +59,14 @@ export default function SetupPage() {
       // If input is empty, CREATE new wallet
       if (!mnemonicInput.trim()) {
         const result = await createWalletMutation.mutateAsync(password);
-        // We need to pass the mnemonic to the dashboard to show it (Pic 3)
-        // For security, usually we don't pass via URL. 
-        // We'll store in sessionStorage for the session or just let the dashboard query it if possible (api doesn't support).
-        // For this demo flow, we'll pass via query param or simple storage. 
-        // Let's use localStorage for "demo" persistence of the phrase to match the screenshot "Pic 3" requiring it to be visible.
-        // NOTE: In production, this is insecure, but required to match the visual "Pic 3" requirement where the phrase is visible on dashboard.
+
+        // AUTO-CREATE ACCOUNT so dashboard isn't empty
+        try {
+          await createAccountMutation.mutateAsync({ chain: selectedChain });
+        } catch (e) {
+          console.error("Failed to auto-create account", e);
+        }
+
         localStorage.setItem("demo_mnemonic", JSON.stringify(result.mnemonic));
         router.push("/");
       } else {
@@ -70,6 +75,14 @@ export default function SetupPage() {
           mnemonic: mnemonicInput.trim(),
           password,
         });
+
+        // AUTO-CREATE ACCOUNT so dashboard isn't empty
+        try {
+          await createAccountMutation.mutateAsync({ chain: selectedChain });
+        } catch (e) {
+          console.error("Failed to auto-create account", e);
+        }
+
         localStorage.setItem("demo_mnemonic", JSON.stringify(mnemonicInput.trim().split(" ")));
         router.push("/");
       }
@@ -90,13 +103,24 @@ export default function SetupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans bg-background text-foreground">
 
-      <div className="absolute top-8 left-8 flex items-center gap-2">
-        {/* Header Logo - Matches Pic 1 Top Left */}
-        <div className="w-8 h-8 flex items-center justify-center">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+      <div className="absolute top-0 left-0 w-full p-8 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 flex items-center justify-center">
+            {/* Simple Box Logo - Matches Kosh Site */}
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-bold">Kosh</span>
+            <span className="text-xs font-mono border border-border px-1.5 py-0.5 rounded-sm text-muted-foreground">v1.3</span>
+          </div>
         </div>
-        <span className="text-xl font-bold">Valtix</span>
-        <span className="text-xs font-mono border border-border px-1.5 rounded-sm">v1.3</span>
+
+        {/* Theme Toggle Placeholder */}
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <span className="h-4 w-4 rounded-full border border-current opacity-50"></span>
+          <div className="w-8 h-4 bg-muted rounded-full relative"><div className="absolute left-0.5 top-0.5 h-3 w-3 bg-background rounded-full shadow-sm"></div></div>
+          <span className="h-4 w-4 rounded-full border border-current opacity-50"></span>
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
@@ -106,61 +130,57 @@ export default function SetupPage() {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.98 }}
           transition={{ duration: 0.2 }}
-          className="w-full max-w-4xl relative z-10" // Increased width for "Pic 2" layout
+          className="w-full max-w-5xl relative z-10"
         >
           {step === "chain-selection" && (
-            <div className="flex flex-col min-h-[60vh] justify-center text-left max-w-2xl mx-auto">
-              {/* Pic 1 exact text styles */}
-              <h1 className="text-6xl font-extrabold mb-4 tracking-tight text-foreground">
-                Valtix supports multiple blockchains
+            <div className="flex flex-col min-h-[60vh] justify-center text-left max-w-2xl mx-auto px-4">
+              <h1 className="text-5xl md:text-6xl font-extrabold mb-6 tracking-tight text-foreground">
+                Valtix supports<br />multiple blockchains
               </h1>
-              <p className="text-2xl text-muted-foreground mb-8 font-medium">
+              <p className="text-2xl text-muted-foreground mb-12 font-medium">
                 Choose a blockchain to get started.
               </p>
 
               <div className="flex flex-row gap-4 mb-20">
                 <Button
-                  className="h-12 px-8 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
+                  className="h-14 px-10 text-lg font-semibold bg-foreground text-background hover:bg-foreground/90 rounded-md"
                   onClick={() => handleChainSelect("solana")}
                 >
                   Solana
                 </Button>
                 <Button
-                  className="h-12 px-8 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md"
+                  className="h-14 px-10 text-lg font-semibold bg-foreground text-background hover:bg-foreground/90 rounded-md"
                   onClick={() => handleChainSelect("ethereum")}
                 >
                   Ethereum
                 </Button>
               </div>
 
-              {/* Footer matching Pic 1 */}
-              <div className="absolute bottom-8 left-0 w-full text-center md:text-left md:pl-0">
-                <p className="text-sm text-foreground font-semibold">Designed and Developed by Valtix</p>
+              <div className="md:mt-12">
+                <p className="text-sm text-foreground font-medium">Designed and Developed by Keshav</p>
               </div>
             </div>
           )}
 
           {step === "setup-wallet" && (
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-2xl mx-auto px-4">
               <h1 className="text-4xl font-extrabold mb-2 tracking-tight">Secret Recovery Phrase</h1>
               <p className="text-xl text-muted-foreground mb-8">
                 Save these words in a safe place.
               </p>
 
               <form autoComplete="off" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} className="space-y-6">
-                {/* Mnemonic Input - Matches Pic 2 */}
                 <Input
                   name="mnemonic_field_unique_id_valtix"
                   id="mnemonic_field"
                   autoComplete="off"
                   data-lpignore="true"
-                  className="w-full h-14 p-4 rounded-lg border border-input bg-background text-lg placeholder:text-muted-foreground/70"
+                  className="w-full h-14 p-4 rounded-lg border border-input bg-background text-lg placeholder:text-muted-foreground/70 shadow-sm"
                   placeholder="Enter your secret phrase (or leave blank to generate)"
                   value={mnemonicInput}
                   onChange={(e) => setMnemonicInput(e.target.value)}
                 />
 
-                {/* Password Input - Required for Backend Functionality */}
                 <div className="relative">
                   <Input
                     name="new_wallet_password_unique_valtix"
@@ -171,11 +191,11 @@ export default function SetupPage() {
                     placeholder="Enter a secure password (min 8 chars)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-14 p-4 rounded-lg border border-input bg-background text-lg"
+                    className="w-full h-14 p-4 rounded-lg border border-input bg-background text-lg shadow-sm"
                   />
                   <button
                     type="button"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground transition-colors"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -183,7 +203,7 @@ export default function SetupPage() {
                 </div>
 
                 {error && (
-                  <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg flex items-center gap-2">
+                  <p className="text-sm text-destructive bg-destructive/10 p-4 rounded-lg flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
                     {error}
                   </p>
@@ -192,8 +212,7 @@ export default function SetupPage() {
                 <div className="flex justify-end pt-4">
                   <Button
                     type="submit"
-                    className="h-14 px-8 text-lg font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-md min-w-[200px]"
-
+                    className="h-14 px-8 text-lg font-semibold bg-foreground text-background hover:bg-foreground/90 rounded-md min-w-[200px]"
                     disabled={createWalletMutation.isPending || importWalletMutation.isPending}
                   >
                     {(createWalletMutation.isPending || importWalletMutation.isPending) ? (
@@ -206,6 +225,9 @@ export default function SetupPage() {
                   </Button>
                 </div>
               </form>
+              <div className="mt-20">
+                <p className="text-sm text-foreground font-medium">Designed and Developed by Keshav</p>
+              </div>
             </div>
           )}
 
@@ -217,7 +239,7 @@ export default function SetupPage() {
                 </div>
                 <h1 className="text-2xl font-bold mb-2">Welcome Back</h1>
                 <p className="text-muted-foreground">
-                  Enter your password to unlock Valtix.
+                  Enter your password to unlock Kosh.
                 </p>
               </div>
               <div className="space-y-4">

@@ -139,6 +139,38 @@ impl Database {
         Ok(result.and_then(|r| r.0.map(|i| (i + 1) as u32)).unwrap_or(0))
     }
 
+    pub async fn delete_account(&self, id: &str) -> Result<(), DatabaseError> {
+        tracing::debug!("Deleting account from database: {}", id);
+
+        // Delete related data first to avoid FK constraint violations
+        // Use unwrap_or_default to handle cases where tables might not have data
+        let _ = sqlx::query("DELETE FROM transaction_history WHERE account_id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| tracing::warn!("Error deleting transaction_history for account {}: {}", id, e));
+
+        let _ = sqlx::query("DELETE FROM nft_cache WHERE account_id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| tracing::warn!("Error deleting nft_cache for account {}: {}", id, e));
+
+        // Finally delete the account - this one must succeed
+        let result = sqlx::query("DELETE FROM accounts WHERE id = ?")
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+        if result.rows_affected() == 0 {
+            tracing::warn!("No account found with id: {}", id);
+            return Err(DatabaseError::NotFound);
+        }
+
+        tracing::debug!("Successfully deleted account: {}", id);
+        Ok(())
+    }
+
     // ==================== Contact Operations ====================
 
     pub async fn create_contact(&self, contact: &ContactRow) -> Result<(), DatabaseError> {
@@ -454,6 +486,38 @@ impl Database {
         .bind(token_id)
         .execute(&self.pool)
         .await?;
+        Ok(())
+    }
+
+    pub async fn reset_database(&self) -> Result<(), DatabaseError> {
+        tracing::info!("Starting database reset...");
+
+        // Delete in order to respect foreign keys
+        // 1. Clear cache and history data first (these reference accounts)
+        tracing::debug!("Clearing transaction history...");
+        let _ = sqlx::query("DELETE FROM transaction_history").execute(&self.pool).await;
+
+        tracing::debug!("Clearing NFT cache...");
+        let _ = sqlx::query("DELETE FROM nft_cache").execute(&self.pool).await;
+
+        // 2. Clear Application Data
+        tracing::debug!("Clearing accounts...");
+        sqlx::query("DELETE FROM accounts").execute(&self.pool).await?;
+
+        tracing::debug!("Clearing contacts...");
+        let _ = sqlx::query("DELETE FROM contacts").execute(&self.pool).await;
+
+        // 3. Clear Multisig Data (these tables might not exist in all schemas)
+        tracing::debug!("Clearing multisig data...");
+        let _ = sqlx::query("DELETE FROM multisig_owners").execute(&self.pool).await;
+        let _ = sqlx::query("DELETE FROM multisig_transactions").execute(&self.pool).await;
+        let _ = sqlx::query("DELETE FROM multisig_wallets").execute(&self.pool).await;
+
+        // 4. Clear Core Wallet Data
+        tracing::debug!("Clearing wallets...");
+        sqlx::query("DELETE FROM wallets").execute(&self.pool).await?;
+
+        tracing::info!("Database reset complete");
         Ok(())
     }
 }

@@ -114,3 +114,43 @@ export function useSelectedAccountBalance() {
     refetchInterval: 60000,
   });
 }
+
+export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      console.log("Deleting account:", id);
+      await accountsApi.delete(id);
+      console.log("Account deleted successfully:", id);
+    },
+    onSuccess: () => {
+      console.log("Delete mutation success, invalidating queries");
+      queryClient.invalidateQueries({ queryKey: ["wallet", "accounts"] });
+    },
+    onError: (error) => {
+      console.error("Delete account mutation error:", error);
+    },
+  });
+}
+
+export function useResetWallet() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      console.log("Resetting wallet...");
+      const result = await authApi.reset();
+      console.log("Wallet reset result:", result);
+      return result;
+    },
+    onSuccess: () => {
+      console.log("Reset mutation success, invalidating all queries");
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["balance"] });
+    },
+    onError: (error) => {
+      console.error("Reset wallet mutation error:", error);
+    },
+  });
+}

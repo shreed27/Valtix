@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use axum::{
     middleware::from_fn_with_state,
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 
@@ -32,23 +32,17 @@ pub fn create_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .route("/nfts/:chain/:address", get(nft::list_nfts))
         .route("/nfts/:chain/:address/:id", get(nft::get_nft))
         // Swap quotes (read-only)
-        .route("/swap/quote", get(swap::get_quote));
-
-    // Protected routes - require JWT authentication
-    let auth_routes = Router::new()
-        // User profile
-        .route("/users/me", get(user_auth::me))
-        .route("/users/logout", post(user_auth::logout))
-        .route("/users/logout-all", post(user_auth::logout_all))
-        .route("/users/change-password", post(user_auth::change_password))
-        // Wallet management
+        .route("/swap/quote", get(swap::get_quote))
+        // Wallet management - PUBLIC (init/auth)
         .route("/auth/unlock", post(auth::unlock))
         .route("/auth/lock", post(auth::lock))
+        .route("/auth/reset", post(auth::reset))
         .route("/wallet/create", post(auth::create_wallet))
         .route("/wallet/import", post(auth::import_wallet))
         // Accounts
         .route("/accounts", get(accounts::list_accounts))
         .route("/accounts", post(accounts::create_account))
+        .route("/accounts/:id", delete(accounts::delete_account))
         // Address Book
         .route("/contacts", get(contacts::list_contacts))
         .route("/contacts", post(contacts::create_contact))
@@ -63,7 +57,15 @@ pub fn create_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .route(
             "/multisig/:id/transactions",
             get(multisig::get_transactions),
-        )
+        );
+
+    // Protected routes - require JWT authentication
+    let auth_routes = Router::new()
+        // User profile
+        .route("/users/me", get(user_auth::me))
+        .route("/users/logout", post(user_auth::logout))
+        .route("/users/logout-all", post(user_auth::logout_all))
+        .route("/users/change-password", post(user_auth::change_password))
         .layer(from_fn_with_state(state.clone(), require_auth));
 
     // Protected routes that also require wallet to be unlocked

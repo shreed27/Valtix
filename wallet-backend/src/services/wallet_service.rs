@@ -316,3 +316,20 @@ pub async fn list_accounts(state: &Arc<AppState>) -> Result<Vec<AccountResponse>
 
     Ok(accounts.into_iter().map(AccountResponse::from).collect())
 }
+
+/// Delete an account
+pub async fn delete_account(state: &Arc<AppState>, id: &str) -> Result<(), WalletServiceError> {
+    tracing::info!("Deleting account via service: {}", id);
+
+    state
+        .db
+        .delete_account(id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Database error while deleting account {}: {}", id, e);
+            WalletServiceError::DatabaseError(e.to_string())
+        })?;
+
+    tracing::info!("Account deleted via service: {}", id);
+    Ok(())
+}

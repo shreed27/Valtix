@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use axum::{
-    extract::State,
+    extract::{Path, State},
     http::StatusCode,
     Json,
 };
@@ -52,4 +52,27 @@ pub async fn create_account(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(account))
+}
+
+/// Delete account
+pub async fn delete_account(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    // Check if unlocked
+    if !wallet_service::is_unlocked(&state).await {
+        return Err((StatusCode::UNAUTHORIZED, "Wallet is locked".to_string()));
+    }
+
+    tracing::info!("Deleting account: {}", id);
+
+    wallet_service::delete_account(&state, &id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to delete account {}: {}", id, e);
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })?;
+
+    tracing::info!("Account deleted successfully: {}", id);
+    Ok(StatusCode::NO_CONTENT)
 }

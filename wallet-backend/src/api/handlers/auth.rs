@@ -110,3 +110,25 @@ pub async fn import_wallet(
 
     Ok(Json(ImportWalletResponse { wallet_id }))
 }
+
+/// Reset wallet (Debug/Dev only - wipes whole DB)
+pub async fn reset(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<StatusResponse>, (StatusCode, String)> {
+    tracing::info!("Resetting wallet database...");
+
+    state.db.reset_database().await.map_err(|e| {
+        tracing::error!("Failed to reset database: {}", e);
+        (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+    })?;
+
+    // Lock memory
+    wallet_service::lock_wallet(&state).await;
+
+    tracing::info!("Wallet reset complete");
+
+    Ok(Json(StatusResponse {
+        has_wallet: false,
+        is_unlocked: false,
+    }))
+}

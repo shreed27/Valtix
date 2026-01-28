@@ -157,6 +157,10 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new ApiError(response.status, error);
   }
 
+  if (response.status === 204) {
+    return {} as T;
+  }
+
   return response.json();
 }
 
@@ -186,6 +190,11 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ mnemonic, password }),
     }),
+
+  reset: () =>
+    fetchApi<WalletStatus>("/auth/reset", {
+      method: "POST",
+    }),
 };
 
 // Accounts API
@@ -196,6 +205,11 @@ export const accountsApi = {
     fetchApi<Account>("/accounts", {
       method: "POST",
       body: JSON.stringify({ chain, name }),
+    }),
+
+  delete: (id: string) =>
+    fetchApi<void>(`/accounts/${id}`, {
+      method: "DELETE",
     }),
 };
 
