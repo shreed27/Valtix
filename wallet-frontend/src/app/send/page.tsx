@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowLeft, Send, Loader2, ExternalLink, ChevronDown } from "lucide-react";
+import { toast } from "sonner";
 
 import { useWalletStore } from "@/hooks/useWalletStore";
 import { useAccounts, useBalance } from "@/hooks/useWallet";
@@ -32,6 +33,7 @@ export default function SendPage() {
   const sendMutation = useMutation({
     mutationFn: () => {
       if (!selectedAccount) throw new Error("No account selected");
+      toast.loading("Sending transaction...");
       return transactionApi.send({
         chain: selectedAccount.chain,
         from_address: selectedAccount.address,
@@ -40,9 +42,13 @@ export default function SendPage() {
       });
     },
     onSuccess: (data) => {
+      toast.dismiss();
+      toast.success("Transaction sent successfully!");
       setTxHash(data.tx_hash);
     },
     onError: (err: any) => {
+      toast.dismiss();
+      toast.error(err.message || "Transaction failed");
       setError(err.message || "Transaction failed");
     },
   });

@@ -14,6 +14,7 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useWalletStatus, useAccounts, useCreateAccount, useDeleteAccount, useResetWallet } from "@/hooks/useWallet";
 import { copyToClipboard } from "@/lib/utils";
@@ -94,7 +95,11 @@ export default function Dashboard() {
   const resetWalletMutation = useResetWallet();
 
   const handleAddWallet = (chain: string) => {
-    createAccountMutation.mutate({ chain });
+    toast.promise(createAccountMutation.mutateAsync({ chain }), {
+      loading: "Creating wallet...",
+      success: `${chain.charAt(0).toUpperCase() + chain.slice(1)} wallet created!`,
+      error: "Failed to create wallet",
+    });
   };
 
   useEffect(() => {
@@ -114,6 +119,7 @@ export default function Dashboard() {
   const handleCopy = async (text: string, id: string) => {
     await copyToClipboard(text);
     setCopiedStates(prev => ({ ...prev, [id]: true }));
+    toast.success("Copied to clipboard!");
     setTimeout(() => {
       setCopiedStates(prev => ({ ...prev, [id]: false }));
     }, 2000);
@@ -123,23 +129,27 @@ export default function Dashboard() {
   const handleConfirmAction = useCallback(async () => {
     if (confirmDialog.action === "deleteAccount" && confirmDialog.accountId) {
       try {
-        console.log("Deleting account:", confirmDialog.accountId);
+        toast.loading("Deleting wallet...");
         await deleteAccountMutation.mutateAsync(confirmDialog.accountId);
-        console.log("Account deleted successfully");
+        toast.dismiss();
+        toast.success("Wallet deleted successfully!");
       } catch (err) {
+        toast.dismiss();
+        toast.error("Failed to delete wallet");
         console.error("Error deleting account:", err);
-        alert("Failed to delete wallet: " + (err instanceof Error ? err.message : String(err)));
       }
     } else if (confirmDialog.action === "resetWallet") {
       try {
-        console.log("Resetting wallet...");
+        toast.loading("Clearing all wallets...");
         await resetWalletMutation.mutateAsync();
-        console.log("Wallet reset completed");
         localStorage.removeItem("demo_mnemonic");
+        toast.dismiss();
+        toast.success("All wallets cleared!");
         router.push("/setup");
       } catch (err) {
+        toast.dismiss();
+        toast.error("Failed to clear wallets");
         console.error("Error resetting wallet:", err);
-        alert("Failed to clear wallets: " + (err instanceof Error ? err.message : String(err)));
       }
     }
     setConfirmDialog({ isOpen: false, title: "", message: "", action: null });

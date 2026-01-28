@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, Key, Download, Eye, EyeOff, ArrowLeft, Copy, Check, ChevronRight } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { toast } from "sonner";
 
 import { useWalletStatus, useCreateWallet, useImportWallet, useUnlockWallet, useCreateAccount } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ export default function SetupPage() {
     setSelectedChain(chain);
     // Save preference and proceed to wallet setup
     localStorage.setItem("selected_chain", chain);
+    toast.success(`${chain.charAt(0).toUpperCase() + chain.slice(1)} selected`);
     setStep("setup-wallet");
   };
 
@@ -59,6 +61,7 @@ export default function SetupPage() {
     try {
       // If input is empty, CREATE new wallet
       if (!mnemonicInput.trim()) {
+        toast.loading("Generating wallet...");
         const result = await createWalletMutation.mutateAsync(password);
 
         // AUTO-CREATE ACCOUNT so dashboard isn't empty
@@ -69,9 +72,12 @@ export default function SetupPage() {
         }
 
         localStorage.setItem("demo_mnemonic", JSON.stringify(result.mnemonic));
+        toast.dismiss();
+        toast.success("Wallet generated successfully!");
         router.push("/");
       } else {
         // IMPORT existing wallet
+        toast.loading("Importing wallet...");
         await importWalletMutation.mutateAsync({
           mnemonic: mnemonicInput.trim(),
           password,
@@ -85,18 +91,27 @@ export default function SetupPage() {
         }
 
         localStorage.setItem("demo_mnemonic", JSON.stringify(mnemonicInput.trim().split(" ")));
+        toast.dismiss();
+        toast.success("Wallet imported successfully!");
         router.push("/");
       }
     } catch (err: any) {
+      toast.dismiss();
+      toast.error(err.message || "Failed to setup wallet");
       setError(err.message || "Failed to setup wallet");
     }
   };
 
   const handleUnlock = async () => {
     try {
+      toast.loading("Unlocking wallet...");
       await unlockMutation.mutateAsync(password);
+      toast.dismiss();
+      toast.success("Wallet unlocked!");
       router.push("/");
     } catch (err: any) {
+      toast.dismiss();
+      toast.error("Invalid password");
       setError("Invalid password");
     }
   };

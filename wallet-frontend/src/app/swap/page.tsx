@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowUpDown, Loader2, RefreshCw, ChevronDown } from "lucide-react";
+import { toast } from "sonner";
 
 import { useWalletStore } from "@/hooks/useWalletStore";
 import { useAccounts, useBalance } from "@/hooks/useWallet";
@@ -74,14 +75,19 @@ export default function SwapPage() {
   const swapMutation = useMutation({
     mutationFn: async () => {
       if (!quote || !selectedAccount) throw new Error("No quote available");
+      toast.loading("Executing swap...");
       return swapApi.executeSwap(selectedAccount.address, quote);
     },
     onSuccess: () => {
+      toast.dismiss();
+      toast.success("Swap completed successfully!");
       setInputAmount("");
       setQuote(null);
       router.push("/");
     },
     onError: (err: any) => {
+      toast.dismiss();
+      toast.error(err.message || "Swap failed");
       setError(err.message || "Swap failed");
     },
   });

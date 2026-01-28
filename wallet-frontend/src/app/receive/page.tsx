@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Copy, Check, ChevronDown, QrCode } from "lucide-react";
+import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
 
 import { useWalletStore } from "@/hooks/useWalletStore";
@@ -23,6 +24,7 @@ export default function ReceivePage() {
     if (selectedAccount?.address) {
       await copyToClipboard(selectedAccount.address);
       setCopied(true);
+      toast.success("Address copied to clipboard!");
       setTimeout(() => setCopied(false), 2000);
     }
   };
