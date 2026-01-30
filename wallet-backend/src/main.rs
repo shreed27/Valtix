@@ -41,12 +41,7 @@ pub struct AppState {
     pub eth_rpc_url: String,
 }
 
-impl AppState {
-    pub fn is_unlocked(&self) -> bool {
-        // This is a sync check - for async use, call unlocked_seed.read().await
-        false // Can't check RwLock synchronously
-    }
-}
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
