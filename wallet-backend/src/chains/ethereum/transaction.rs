@@ -1,6 +1,11 @@
-//! Ethereum transaction operations using JSON-RPC
+//! Ethereum transaction operations using ethers-rs
 
+use ethers::core::types::{Address, TransactionRequest};
+use ethers::middleware::SignerMiddleware;
+use ethers::providers::{Http, Middleware, Provider};
+use ethers::signers::{LocalWallet, Signer};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use thiserror::Error;
 
 use super::wallet::EthereumWallet;
@@ -17,6 +22,10 @@ pub enum EthTxError {
     TransactionFailed(String),
     #[error("Invalid amount")]
     InvalidAmount,
+    #[error("Signing error: {0}")]
+    SigningError(String),
+    #[error("Internal error: {0}")]
+    InternalError(String),
 }
 
 /// Transaction result
@@ -40,60 +49,48 @@ pub struct EthTransactionInfo {
     pub status: String,
 }
 
-#[derive(Debug, Serialize)]
-struct JsonRpcRequest {
-    jsonrpc: &'static str,
-    method: &'static str,
-    params: Vec<serde_json::Value>,
-    id: u32,
-}
-
-#[derive(Debug, Deserialize)]
-struct JsonRpcResponse {
-    result: Option<serde_json::Value>,
-    error: Option<JsonRpcError>,
-}
-
-#[derive(Debug, Deserialize)]
-struct JsonRpcError {
-    message: String,
-}
-
-/// Send native ETH (simplified - returns placeholder for demo)
+/// Send native ETH
 pub async fn send_eth(
     rpc_url: &str,
     wallet: &EthereumWallet,
     to: &str,
     amount_eth: f64,
 ) -> Result<EthTxResult, EthTxError> {
-    // Validate addresses
-    if !super::wallet::validate_address(to) {
-        return Err(EthTxError::InvalidAddress(to.to_string()));
-    }
+    // 1. Connect to the Ethereum node
+    let provider = Provider::<Http>::try_from(rpc_url)
+        .map_err(|e| EthTxError::RpcError(e.to_string()))?;
 
-    let wei = (amount_eth * 1e18) as u128;
-    if wei == 0 {
-        return Err(EthTxError::InvalidAmount);
-    }
+    // 2. Parse recipient address
+    let to_address = Address::from_str(to)
+        .map_err(|_| EthTxError::InvalidAddress(to.to_string()))?;
 
-    // Get nonce
-    let nonce = get_transaction_count(rpc_url, &wallet.address_string()).await?;
+    // 3. Parse amount
+    let value = ethers::utils::parse_ether(amount_eth)
+        .map_err(|_| EthTxError::InvalidAmount)?;
 
-    // Get gas price
-    let gas_price = get_gas_price(rpc_url).await?;
+    // 4. Create signer wallet from the private key
+    let chain_id = provider.get_chainid().await
+        .map_err(|e| EthTxError::RpcError(e.to_string()))?
+        .as_u64();
+        
+    let signer_wallet = LocalWallet::from(wallet.signing_key())
+        .with_chain_id(chain_id);
 
-    // For a real implementation, we would:
-    // 1. Build the transaction
-    // 2. Sign it with the wallet
-    // 3. Send the raw transaction
-    //
-    // This is simplified for the demo
-    let tx_hash = format!(
-        "0x{}",
-        hex::encode(&sha2::Sha256::digest(
-            format!("{}{}{}{}", wallet.address_string(), to, wei, nonce).as_bytes()
-        ))
-    );
+    // 5. Build the transaction
+    let tx = TransactionRequest::new()
+        .to(to_address)
+        .value(value);
+
+    // 6. Create client with signer middleware
+    let client = SignerMiddleware::new(provider, signer_wallet);
+
+    // 7. Send the transaction and get the pending transaction
+    let pending_tx = client
+        .send_transaction(tx, None)
+        .await
+        .map_err(|e| EthTxError::TransactionFailed(e.to_string()))?;
+
+    let tx_hash = format!("0x{:x}", pending_tx.tx_hash());
 
     Ok(EthTxResult {
         tx_hash,
@@ -101,9 +98,10 @@ pub async fn send_eth(
     })
 }
 
+
 /// Send ERC-20 tokens (simplified - returns placeholder for demo)
 pub async fn send_erc20(
-    rpc_url: &str,
+    _rpc_url: &str,
     wallet: &EthereumWallet,
     token_address: &str,
     to: &str,
@@ -117,22 +115,25 @@ pub async fn send_erc20(
         return Err(EthTxError::InvalidAddress(token_address.to_string()));
     }
 
-    // Get nonce
-    let nonce = get_transaction_count(rpc_url, &wallet.address_string()).await?;
-
     // For a real implementation, we would build the ERC-20 transfer call data
-    // and sign/send the transaction
+    // and sign/send the transaction using `ethers-rs`. This is a much more involved
+    // process than native ETH transfer as it requires ABI encoding.
+    //
+    // Example steps would be:
+    // 1. Define the ERC20 ABI.
+    // 2. Create a `Contract` instance.
+    // 3. Build the `transfer` function call.
+    // 4. Send the transaction via the signer middleware.
 
     let tx_hash = format!(
         "0x{}",
-        hex::encode(&sha2::Sha256::digest(
+        hex::encode(sha2::Sha256::digest(
             format!(
-                "{}{}{}{}{}",
+                "{}{}{}{}",
                 wallet.address_string(),
                 token_address,
                 to,
                 amount,
-                nonce
             )
             .as_bytes()
         ))
@@ -140,81 +141,8 @@ pub async fn send_erc20(
 
     Ok(EthTxResult {
         tx_hash,
-        status: "pending".to_string(),
+        status: "pending_placeholder".to_string(),
     })
-}
-
-/// Get transaction count (nonce) for an address
-async fn get_transaction_count(rpc_url: &str, address: &str) -> Result<u64, EthTxError> {
-    let client = reqwest::Client::new();
-
-    let request = JsonRpcRequest {
-        jsonrpc: "2.0",
-        method: "eth_getTransactionCount",
-        params: vec![
-            serde_json::Value::String(address.to_string()),
-            serde_json::Value::String("pending".to_string()),
-        ],
-        id: 1,
-    };
-
-    let response: JsonRpcResponse = client
-        .post(rpc_url)
-        .json(&request)
-        .send()
-        .await
-        .map_err(|e| EthTxError::RpcError(e.to_string()))?
-        .json()
-        .await
-        .map_err(|e| EthTxError::RpcError(e.to_string()))?;
-
-    if let Some(error) = response.error {
-        return Err(EthTxError::RpcError(error.message));
-    }
-
-    let hex_count = response
-        .result
-        .and_then(|v| v.as_str().map(String::from))
-        .unwrap_or_else(|| "0x0".to_string());
-
-    let count = u64::from_str_radix(hex_count.trim_start_matches("0x"), 16).unwrap_or(0);
-
-    Ok(count)
-}
-
-/// Get current gas price
-pub async fn get_gas_price(rpc_url: &str) -> Result<u128, EthTxError> {
-    let client = reqwest::Client::new();
-
-    let request = JsonRpcRequest {
-        jsonrpc: "2.0",
-        method: "eth_gasPrice",
-        params: vec![],
-        id: 1,
-    };
-
-    let response: JsonRpcResponse = client
-        .post(rpc_url)
-        .json(&request)
-        .send()
-        .await
-        .map_err(|e| EthTxError::RpcError(e.to_string()))?
-        .json()
-        .await
-        .map_err(|e| EthTxError::RpcError(e.to_string()))?;
-
-    if let Some(error) = response.error {
-        return Err(EthTxError::RpcError(error.message));
-    }
-
-    let hex_price = response
-        .result
-        .and_then(|v| v.as_str().map(String::from))
-        .unwrap_or_else(|| "0x0".to_string());
-
-    let price = u128::from_str_radix(hex_price.trim_start_matches("0x"), 16).unwrap_or(0);
-
-    Ok(price)
 }
 
 /// Get transaction history for an address (simplified)

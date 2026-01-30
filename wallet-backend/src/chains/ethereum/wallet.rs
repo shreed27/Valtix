@@ -58,6 +58,11 @@ impl EthereumWallet {
         self.address.clone()
     }
 
+    /// Get a clone of the signing key
+    pub fn signing_key(&self) -> Secp256k1SigningKey {
+        self.signing_key.clone()
+    }
+
     /// Get the signing key bytes
     pub fn signing_key_bytes(&self) -> [u8; 32] {
         self.signing_key.to_bytes().into()
