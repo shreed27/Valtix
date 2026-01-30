@@ -7,6 +7,8 @@ use ethers::signers::{LocalWallet, Signer};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use thiserror::Error;
+use reqwest::Client;
+use chrono::{DateTime, Utc};
 
 use super::wallet::EthereumWallet;
 
@@ -26,6 +28,8 @@ pub enum EthTxError {
     SigningError(String),
     #[error("Internal error: {0}")]
     InternalError(String),
+    #[error("Alchemy API error: {0}")]
+    AlchemyApiError(String),
 }
 
 /// Transaction result
@@ -47,6 +51,44 @@ pub struct EthTransactionInfo {
     pub block_number: Option<u64>,
     pub timestamp: Option<u64>,
     pub status: String,
+}
+
+// Alchemy API response structs
+#[derive(Debug, Deserialize)]
+struct AlchemyAssetTransfersResponse {
+    result: AlchemyAssetTransfersResult,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AlchemyAssetTransfersResult {
+    transfers: Vec<AlchemyTransfer>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AlchemyTransfer {
+    block_num: String,
+    hash: String,
+    from: String,
+    to: Option<String>,
+    value: Option<f64>,
+    asset: Option<String>,
+    // There can be more metadata, but we'll focus on what we need for EthTransactionInfo
+    #[serde(default)]
+    metadata: AlchemyMetadata,
+    #[serde(default = "Utc::now")]
+    block_confirm_time: DateTime<Utc>,
+    #[serde(rename = "gasUsed", default)]
+    gas_used: String,
+    #[serde(rename = "gasPrice", default)]
+    gas_price: String,
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct AlchemyMetadata {
+    // Add fields if needed
 }
 
 /// Send native ETH
@@ -145,16 +187,75 @@ pub async fn send_erc20(
     })
 }
 
-/// Get transaction history for an address (simplified)
+/// Get transaction history for an address using Alchemy API
 pub async fn get_transaction_history(
-    _rpc_url: &str,
-    _address: &str,
-    _limit: usize,
+    rpc_url: &str,
+    address: &str,
+    limit: usize,
 ) -> Result<Vec<EthTransactionInfo>, EthTxError> {
-    // Note: Standard Ethereum JSON-RPC doesn't have a direct way to get transaction history.
-    // In production, you would use an indexer like Etherscan API, The Graph, or Alchemy.
-    // For this demo, we return an empty list.
-    Ok(vec![])
+    let client = Client::new();
+
+    // Alchemy's getAssetTransfers method
+    // Assumes rpc_url is an Alchemy API endpoint (e.g., https://eth-mainnet.alchemyapi.io/v2/YOUR_API_KEY)
+    let request_body = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "alchemy_getAssetTransfers",
+        "params": [
+            {
+                "fromBlock": "0x0",
+                "toBlock": "latest",
+                "toAddress": address, // Get transfers TO this address
+                "category": ["external", "erc20", "erc721", "erc1155"],
+                "withMetadata": true,
+                "maxCount": format!("0x{:x}", limit), // Alchemy expects hex for maxCount
+            }
+        ]
+    });
+
+    let response = client
+        .post(rpc_url)
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| EthTxError::AlchemyApiError(e.to_string()))?;
+
+    let alchemy_response: AlchemyAssetTransfersResponse = response
+        .json()
+        .await
+        .map_err(|e| EthTxError::AlchemyApiError(e.to_string()))?;
+
+    let mut transactions: Vec<EthTransactionInfo> = Vec::new();
+
+    for transfer in alchemy_response.result.transfers {
+        // Alchemy returns block_num as hex, convert to u64
+        let block_number = u64::from_str_radix(transfer.block_num.trim_start_matches("0x"), 16)
+            .ok()
+            .unwrap_or_default();
+
+        // Alchemy returns timestamp as DateTime<Utc>, convert to u64 seconds
+        let timestamp = transfer.block_confirm_time.timestamp() as u64;
+
+        // Map Alchemy transfer to EthTransactionInfo
+        transactions.push(EthTransactionInfo {
+            hash: transfer.hash,
+            from: transfer.from,
+            to: transfer.to,
+            // Value from Alchemy is already a float, convert to string
+            value: transfer.value.map_or("0.0".to_string(), |v| v.to_string()),
+            gas_price: u128::from_str_radix(transfer.gas_price.trim_start_matches("0x"), 16)
+                .map(|p| p.to_string())
+                .unwrap_or_else(|_| "0".to_string()),
+            gas_used: u64::from_str_radix(transfer.gas_used.trim_start_matches("0x"), 16)
+                .map(|g| g.to_string())
+                .ok(),
+            block_number: Some(block_number),
+            timestamp: Some(timestamp),
+            status: "success".to_string(), // Alchemy transfers are confirmed
+        });
+    }
+
+    Ok(transactions)
 }
 
 /// Convert Wei to Gwei
