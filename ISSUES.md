@@ -4,13 +4,13 @@ This document lists all the critical, high, and medium priority issues identifie
 
 ## Phase 1: Critical Fixes (Must Fix)
 - [x] **`is_unlocked()` Always Returns False:** The wallet state check is broken and almost always reports the wallet as locked.
-- [ ] **Ethereum Transactions Return Fake Hashes:** Users are shown a fake transaction hash, but no transaction is actually sent.
-- [ ] **Mobile Navigation Hidden:** The main application navigation is not visible on mobile devices, making it unusable.
-- [ ] **No Address Validation Before Send:** Users can send funds to invalid addresses, resulting in permanent loss of funds.
-- [ ] **Default JWT Secret in Code:** A hardcoded JWT secret allows anyone to forge authentication tokens.
+- [x] **Ethereum Transactions Return Fake Hashes:** Users are shown a fake transaction hash, but no transaction is actually sent.
+- [x] **Mobile Navigation Hidden:** The main application navigation is not visible on mobile devices, making it unusable.
+- [x] **No Address Validation Before Send:** Users can send funds to invalid addresses, resulting in permanent loss of funds.
+- [x] **Default JWT Secret in Code:** A hardcoded JWT secret allows anyone to forge authentication tokens.
 
 ## Phase 2: Security & Stability (High Priority)
-- [ ] **Panic on Invalid Derivation Path:** The backend panics and crashes if an invalid derivation path is used.
+- [x] **Panic on Invalid Derivation Path:** The backend panics and crashes if an invalid derivation path is used.
 - [ ] **Panic on Network Errors:** The backend panics when encountering unexpected data from external APIs (e.g., Solana NFT metadata).
 - [ ] **Insecure Mnemonic Storage:** The 12-word recovery phrase is stored in plaintext in `localStorage`, making it vulnerable to theft.
 - [ ] **Missing CSRF Protection:** The application is vulnerable to Cross-Site Request Forgery attacks.
