@@ -195,7 +195,9 @@ fn parse_derivation_path(path: &str) -> Result<Vec<u32>, DerivationError> {
 
     for part in path[2..].split('/') {
         if part.is_empty() {
-            continue;
+            return Err(DerivationError::InvalidPath(
+                "Path contains empty component (double slash)".to_string(),
+            ));
         }
 
         let (num_str, hardened) = if part.ends_with('\'') || part.ends_with('h') {
@@ -349,5 +351,24 @@ mod tests {
         let (_, addr3) = derive_ethereum_keypair(&seed, 0).unwrap();
         let (_, addr4) = derive_ethereum_keypair(&seed, 0).unwrap();
         assert_eq!(addr3, addr4);
+    }
+
+    #[test]
+    fn test_invalid_path_no_panic() {
+        // These should return Err, not panic
+        assert!(parse_derivation_path("").is_err());
+        assert!(parse_derivation_path("m").is_err());
+        assert!(parse_derivation_path("invalid").is_err());
+        assert!(parse_derivation_path("m/invalid").is_err());
+        // "m/" returns Ok with empty vector
+        assert!(parse_derivation_path("m/").is_ok()); 
+        
+        // Edge cases that might panic
+        assert!(parse_derivation_path("m//").is_err()); // empty component now errors
+        assert!(parse_derivation_path("m/ ").is_err()); // parse error on " "
+        
+        // Unicode check (m/ + unicode)
+        // ensure path[2..] doesn't panic
+        assert!(parse_derivation_path("m/👍").is_err()); // "👍" cannot parse as u32
     }
 }
