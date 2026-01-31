@@ -80,15 +80,30 @@ impl EthereumWallet {
 /// Validate an Ethereum address
 pub fn validate_address(address: &str) -> bool {
     // Remove 0x prefix if present
-    let addr = address.strip_prefix("0x").unwrap_or(address);
+    let addr_clean = address.strip_prefix("0x").unwrap_or(address);
 
     // Check length (40 hex chars = 20 bytes)
-    if addr.len() != 40 {
+    if addr_clean.len() != 40 {
         return false;
     }
 
     // Check if all characters are valid hex
-    addr.chars().all(|c| c.is_ascii_hexdigit())
+    if !addr_clean.chars().all(|c| c.is_ascii_hexdigit()) {
+        return false;
+    }
+
+    // Check for mixed case - if mixed, must match checksum
+    let is_lowercase = addr_clean.chars().all(|c| !c.is_alphabetic() || c.is_lowercase());
+    let is_uppercase = addr_clean.chars().all(|c| !c.is_alphabetic() || c.is_uppercase());
+
+    if !is_lowercase && !is_uppercase {
+        let checksummed = checksum_address(addr_clean);
+        // The checksum (from checksum_address) includes 0x, so compare properly
+        let expected = checksummed.strip_prefix("0x").unwrap_or(&checksummed);
+        return addr_clean == expected;
+    }
+
+    true
 }
 
 /// Checksum an Ethereum address (EIP-55)
@@ -145,9 +160,18 @@ mod tests {
 
     #[test]
     fn test_validate_address() {
-        assert!(validate_address("0x742d35Cc6634C0532925a3b844Bc9e7595f3fE70"));
-        assert!(validate_address("742d35Cc6634C0532925a3b844Bc9e7595f3fE70"));
+        assert!(validate_address("0x742d35Cc6634C0532925a3b844Bc9e7595f3fE70")); // Valid checksum
+        assert!(validate_address("0x742d35cc6634c0532925a3b844bc9e7595f3fe70")); // Valid lowercase
+        assert!(validate_address("0x742D35CC6634C0532925A3B844BC9E7595F3FE70")); // Valid uppercase (treated as valid)
+        
         assert!(!validate_address("0x742d35Cc6634C0532925a3b844Bc9e7595f3fE7")); // Too short
         assert!(!validate_address("0xGGGd35Cc6634C0532925a3b844Bc9e7595f3fE70")); // Invalid hex
+        
+        // Invalid checksum (mixed case but wrong casing)
+        // Correct: 742d35Cc...
+        // Wrong:   742d35cc... (would be valid if all lower, but if mixed...)
+        // Let's modify one char case in the valid checksum one:
+        // 0x742d35Cc... -> 0x742d35cC...
+        assert!(!validate_address("0x742d35cC6634C0532925a3b844Bc9e7595f3fE70"));
     }
 }
