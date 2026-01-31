@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   Trash2,
   Eye,
@@ -13,12 +12,17 @@ import {
   ChevronUp,
   AlertTriangle
 } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useWalletStatus, useAccounts, useCreateAccount, useDeleteAccount, useResetWallet } from "@/hooks/useWallet";
 import { copyToClipboard } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: "Valtix",
+    description: "A simple and secure crypto wallet",
+  };
 
 // Confirmation Dialog Component
 function ConfirmDialog({
@@ -191,33 +195,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen max-w-5xl mx-auto px-6 py-12 space-y-12 font-sans text-foreground">
-
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 flex items-center justify-center">
-            {/* Hexagon Logo - Matches Pic */}
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-          </div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">Valtix</h1>
-            <span className="text-xs font-mono text-muted-foreground border border-border px-1.5 py-0.5 rounded-sm">v1.3</span>
-          </div>
-        </div>
-        {/* Navigation - Restored for feature visibility */}
-        <nav className="hidden md:flex items-center gap-6">
-          <Link href="/send" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Send</Link>
-          <Link href="/receive" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Receive</Link>
-          <Link href="/swap" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Swap</Link>
-          <Link href="/nfts" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">NFTs</Link>
-          <Link href="/contacts" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Contacts</Link>
-          <Link href="/multisig" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Multisig</Link>
-        </nav>
-
-        <div className="flex items-center gap-4">
-          {/* Dark/Light Mode Toggle */}
-          <ThemeToggle />
-        </div>
-      </header>
 
       {/* Secret Phrase Section - Exactly matching Screenshot */}
       <div className="border rounded-lg bg-card p-6 shadow-sm">
