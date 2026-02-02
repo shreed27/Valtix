@@ -163,14 +163,19 @@ fn get_nft_metadata(rpc_url: &str, mint: &str) -> Result<NftMetadata, NftError> 
     // Parse Metaplex metadata
     // The metadata account has a specific structure
     let data = &account.data;
-    if data.len() < 100 {
-        return Err(NftError::MetadataError("Invalid metadata".to_string()));
+    
+    // Basic structural check for Metaplex Data V1 (minimum size)
+    // 1 (key) + 32 (auth) + 32 (mint) + 4 (name len) + 32 (name) + 4 (sym len) + 10 (sym) + 4 (uri len) + 200 (uri)
+    // = 319 bytes
+    if data.len() < 319 {
+        return Err(NftError::MetadataError("Invalid metadata: Data too short".to_string()));
     }
 
     // Skip discriminator and update authority
     let mut offset = 1 + 32 + 32;
 
     // Read name (32 bytes max, 4 byte length prefix)
+    // Safe slicing since we checked total length
     let name_len = u32::from_le_bytes(data[offset..offset + 4].try_into().unwrap()) as usize;
     offset += 4;
     let name = String::from_utf8_lossy(&data[offset..offset + name_len.min(32)])
