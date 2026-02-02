@@ -13,7 +13,7 @@ import { transactionApi, type Account } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { truncateAddress, formatBalance, getExplorerUrl } from "@/lib/utils";
+import { truncateAddress, formatBalance, getExplorerUrl, isValidEthereumAddress, isValidSolanaAddress } from "@/lib/utils";
 
 export default function SendPage() {
   const router = useRouter();
@@ -59,6 +59,17 @@ export default function SendPage() {
       setError("Please enter a recipient address");
       return;
     }
+
+    if (selectedAccount?.chain === "ethereum" && !isValidEthereumAddress(recipient)) {
+      setError("Invalid Ethereum address");
+      return;
+    }
+
+    if (selectedAccount?.chain === "solana" && !isValidSolanaAddress(recipient)) {
+      setError("Invalid Solana address");
+      return;
+    }
+
     if (!amount || parseFloat(amount) <= 0) {
       setError("Please enter a valid amount");
       return;
@@ -162,13 +173,11 @@ export default function SendPage() {
                         selectAccount(account);
                         setShowAccountPicker(false);
                       }}
-                      className={`w-full p-3 text-left hover:bg-secondary transition-colors flex items-center gap-3 ${
-                        selectedAccount?.id === account.id ? 'bg-secondary' : ''
-                      }`}
+                      className={`w-full p-3 text-left hover:bg-secondary transition-colors flex items-center gap-3 ${selectedAccount?.id === account.id ? 'bg-secondary' : ''
+                        }`}
                     >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
-                        account.chain === 'solana' ? 'bg-purple-500' : 'bg-blue-500'
-                      }`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${account.chain === 'solana' ? 'bg-purple-500' : 'bg-blue-500'
+                        }`}>
                         {account.chain === 'solana' ? 'SOL' : 'ETH'}
                       </div>
                       <div>
