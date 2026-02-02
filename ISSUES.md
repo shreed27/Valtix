@@ -10,8 +10,8 @@ This document lists all the critical, high, and medium priority issues identifie
 - [x] **Default JWT Secret in Code:** A hardcoded JWT secret allows anyone to forge authentication tokens.
 
 ## Phase 2: Security & Stability (High Priority)
-- [ ] **Panic on Invalid Derivation Path:** The backend panics and crashes if an invalid derivation path is used.
-- [ ] **Panic on Network Errors:** The backend panics when encountering unexpected data from external APIs (e.g., Solana NFT metadata).
+- [x] **Panic on Invalid Derivation Path:** The backend panics and crashes if an invalid derivation path is used.
+- [x] **Panic on Network Errors:** The backend panics when encountering unexpected data from external APIs (e.g., Solana NFT metadata).
 - [ ] **Insecure Mnemonic Storage:** The 12-word recovery phrase is stored in plaintext in `localStorage`, making it vulnerable to theft.
 - [ ] **Missing CSRF Protection:** The application is vulnerable to Cross-Site Request Forgery attacks.
 - [ ] **No API Rate Limiting:** The backend is vulnerable to brute-force and denial-of-service attacks.
