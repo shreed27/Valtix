@@ -351,7 +351,7 @@ mod tests {
         let (_, addr3) = derive_ethereum_keypair(&seed, 0).unwrap();
         let (_, addr4) = derive_ethereum_keypair(&seed, 0).unwrap();
         assert_eq!(addr3, addr4);
-    #[test]
+    }
     fn test_invalid_path_no_panic() {
         // These should return Err, not panic
         assert!(parse_derivation_path("").is_err());

@@ -22,9 +22,9 @@ This document lists all the critical, high, and medium priority issues identifie
 - [x] **Major Accessibility Gaps:** The application is not accessible to users with disabilities (missing ARIA labels, no focus management).
 
 ## Phase 3: UX & Enhancements (Medium Priority)
-- [ ] **Missing Database Indexes:** Certain database queries are inefficient due to missing indexes.
-- [ ] **Race Condition in Database Reset:** The database reset logic can fail and leave the DB in a corrupt state.
-- [ ] **No Form Input Validation:** Forms for sending funds or importing mnemonics lack proper validation.
+- [x] **Missing Database Indexes:** Certain database queries are inefficient due to missing indexes.
+- [x] **Race Condition in Database Reset:** The database reset logic can fail and leave the DB in a corrupt state.
+- [x] **No Form Input Validation:** Forms for sending funds or importing mnemonics lack proper validation.
 - [ ] **No Transaction Fee Display:** Users are not shown the estimated network fee before sending a transaction.
 - [ ] **No Balance Display on Dashboard:** The main dashboard does not show the balance for each account.
 - [ ] **Missing Settings Page:** There is no interface for users to change their password, export their wallet, or manage preferences.
