@@ -492,30 +492,52 @@ impl Database {
     pub async fn reset_database(&self) -> Result<(), DatabaseError> {
         tracing::info!("Starting database reset...");
 
+        let mut tx = self.pool.begin().await?;
+
         // Delete in order to respect foreign keys
         // 1. Clear cache and history data first (these reference accounts)
         tracing::debug!("Clearing transaction history...");
-        let _ = sqlx::query("DELETE FROM transaction_history").execute(&self.pool).await;
+        sqlx::query("DELETE FROM transaction_history")
+            .execute(&mut *tx)
+            .await?;
 
         tracing::debug!("Clearing NFT cache...");
-        let _ = sqlx::query("DELETE FROM nft_cache").execute(&self.pool).await;
+        sqlx::query("DELETE FROM nft_cache")
+            .execute(&mut *tx)
+            .await?;
 
         // 2. Clear Application Data
         tracing::debug!("Clearing accounts...");
-        sqlx::query("DELETE FROM accounts").execute(&self.pool).await?;
+        sqlx::query("DELETE FROM accounts")
+            .execute(&mut *tx)
+            .await?;
 
         tracing::debug!("Clearing contacts...");
-        let _ = sqlx::query("DELETE FROM contacts").execute(&self.pool).await;
+        sqlx::query("DELETE FROM contacts")
+            .execute(&mut *tx)
+            .await?;
 
-        // 3. Clear Multisig Data (these tables might not exist in all schemas)
+        // 3. Clear Multisig Data (these tables might not exist in all schemas but should in production)
         tracing::debug!("Clearing multisig data...");
-        let _ = sqlx::query("DELETE FROM multisig_owners").execute(&self.pool).await;
-        let _ = sqlx::query("DELETE FROM multisig_transactions").execute(&self.pool).await;
-        let _ = sqlx::query("DELETE FROM multisig_wallets").execute(&self.pool).await;
+        // valid tables from migration 001
+        sqlx::query("DELETE FROM multisig_owners")
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("DELETE FROM multisig_transactions")
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("DELETE FROM multisig_wallets")
+            .execute(&mut *tx)
+            .await?;
 
         // 4. Clear Core Wallet Data
         tracing::debug!("Clearing wallets...");
-        sqlx::query("DELETE FROM wallets").execute(&self.pool).await?;
+        sqlx::query("DELETE FROM wallets")
+            .execute(&mut *tx)
+            .await?;
+
+        // Commit the transaction
+        tx.commit().await?;
 
         tracing::info!("Database reset complete");
         Ok(())

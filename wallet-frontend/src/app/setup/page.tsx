@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, Key, Download, Eye, EyeOff, ArrowLeft, Copy, Check, ChevronRight } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { toast } from "sonner";
+import * as z from "zod";
 
 import { useWalletStatus, useCreateWallet, useImportWallet, useUnlockWallet, useCreateAccount } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/button";
@@ -53,8 +54,12 @@ export default function SetupPage() {
   const handleSubmit = async () => {
     setError("");
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+    // Validate password
+    const passwordSchema = z.string().min(8, "Password must be at least 8 characters");
+    const passwordResult = passwordSchema.safeParse(password);
+
+    if (!passwordResult.success) {
+      setError(passwordResult.error.issues[0].message);
       return;
     }
 
@@ -80,6 +85,19 @@ export default function SetupPage() {
         router.push("/");
       } else {
         // IMPORT existing wallet
+
+        // Validate mnemonic word count
+        const mnemonicSchema = z.string().trim().refine((val) => {
+          const wordCount = val.split(/\s+/).length;
+          return [12, 15, 18, 21, 24].includes(wordCount);
+        }, "Secret phrase must be 12, 15, 18, 21, or 24 words");
+
+        const mnemonicResult = mnemonicSchema.safeParse(mnemonicInput);
+        if (!mnemonicResult.success) {
+          setError(mnemonicResult.error.issues[0].message);
+          return;
+        }
+
         toast.loading("Importing wallet...");
         await importWalletMutation.mutateAsync({
           mnemonic: mnemonicInput.trim(),
