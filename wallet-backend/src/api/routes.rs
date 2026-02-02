@@ -9,6 +9,7 @@ use axum::{
 };
 
 use crate::AppState;
+use crate::api;
 
 use super::handlers::{
     accounts, auth, balance, contacts, multisig, nft, swap, transaction, user_auth,
@@ -95,4 +96,5 @@ pub fn create_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .merge(public_routes)
         .merge(auth_routes)
         .merge(wallet_routes)
+        .layer(axum::middleware::from_fn(api::middleware::rate_limit::rate_limit_middleware))
 }

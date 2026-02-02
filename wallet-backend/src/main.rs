@@ -27,14 +27,15 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use crate::services::user_service::UserService;
 use crate::storage::database::Database;
 
-/// Application state shared across all handlers
 pub struct AppState {
     /// Database connection pool
     pub db: Database,
     /// User authentication service
     pub user_service: UserService,
-    /// Decrypted seed (only present when wallet is unlocked)
-    pub unlocked_seed: RwLock<Option<zeroize::Zeroizing<[u8; 64]>>>,
+    /// Encrypted seed in memory (encrypted with session_key)
+    pub unlocked_seed: RwLock<Option<Vec<u8>>>,
+    /// Ephemeral session key for memory encryption
+    pub session_key: [u8; 32],
     /// Solana RPC URL
     pub solana_rpc_url: String,
     /// Ethereum RPC URL
@@ -82,11 +83,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create user service
     let user_service = UserService::new(pool.clone(), jwt_secret);
 
+    // Generate ephemeral session key
+    let mut session_key = [0u8; 32];
+    use rand::RngCore;
+    rand::thread_rng().fill_bytes(&mut session_key);
+
     // Create application state
     let state = Arc::new(AppState {
         db: Database::new(pool),
         user_service,
         unlocked_seed: RwLock::new(None),
+        session_key,
         solana_rpc_url,
         eth_rpc_url,
     });

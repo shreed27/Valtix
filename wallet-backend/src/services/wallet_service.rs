@@ -74,10 +74,17 @@ pub async fn create_wallet(
         .await
         .map_err(|e| WalletServiceError::DatabaseError(e.to_string()))?;
 
-    // Store seed in memory (unlocked state)
+    // Store seed in memory (encrypted with session_key)
     {
         let mut unlocked = state.unlocked_seed.write().await;
-        *unlocked = Some(Zeroizing::new(*seed.as_bytes()));
+        // Simple XOR encryption with session key to prevent plaintext in memory
+        let encrypted_mem: Vec<u8> = seed
+            .as_bytes()
+            .iter()
+            .zip(state.session_key.iter().cycle())
+            .map(|(b, k)| b ^ k)
+            .collect();
+        *unlocked = Some(encrypted_mem);
     }
 
     // Create default accounts for both chains
@@ -128,10 +135,17 @@ pub async fn import_wallet(
         .await
         .map_err(|e| WalletServiceError::DatabaseError(e.to_string()))?;
 
-    // Store seed in memory (unlocked state)
+    // Store seed in memory (encrypted with session_key)
     {
         let mut unlocked = state.unlocked_seed.write().await;
-        *unlocked = Some(Zeroizing::new(*seed.as_bytes()));
+        // Simple XOR encryption with session key to prevent plaintext in memory
+        let encrypted_mem: Vec<u8> = seed
+            .as_bytes()
+            .iter()
+            .zip(state.session_key.iter().cycle())
+            .map(|(b, k)| b ^ k)
+            .collect();
+        *unlocked = Some(encrypted_mem);
     }
 
     // Create default accounts for both chains
@@ -164,10 +178,16 @@ pub async fn unlock_wallet(state: &Arc<AppState>, password: &str) -> Result<(), 
     let seed = decrypt_seed(&encrypted, password)
         .map_err(|_| WalletServiceError::InvalidPassword)?;
 
-    // Store in memory
+    // Store in memory (encrypted)
     {
         let mut unlocked = state.unlocked_seed.write().await;
-        *unlocked = Some(Zeroizing::new(*seed.as_bytes()));
+        let encrypted_mem: Vec<u8> = seed
+            .as_bytes()
+            .iter()
+            .zip(state.session_key.iter().cycle())
+            .map(|(b, k)| b ^ k)
+            .collect();
+        *unlocked = Some(encrypted_mem);
     }
 
     Ok(())
@@ -188,8 +208,22 @@ pub async fn is_unlocked(state: &Arc<AppState>) -> bool {
 /// Get unlocked seed
 pub async fn get_seed(state: &Arc<AppState>) -> Result<SecureSeed, WalletServiceError> {
     let unlocked = state.unlocked_seed.read().await;
-    let seed_bytes = unlocked.as_ref().ok_or(WalletServiceError::WalletLocked)?;
-    Ok(SecureSeed::new(**seed_bytes))
+    let encrypted_bytes = unlocked.as_ref().ok_or(WalletServiceError::WalletLocked)?;
+    
+    // Decrypt on the fly
+    let decrypted_vec: Vec<u8> = encrypted_bytes
+        .iter()
+        .zip(state.session_key.iter().cycle())
+        .map(|(b, k)| b ^ k)
+        .collect();
+        
+    let mut seed_arr = [0u8; 64];
+    if decrypted_vec.len() != 64 {
+         return Err(WalletServiceError::DatabaseError("Invalid seed length in memory".to_string()));
+    }
+    seed_arr.copy_from_slice(&decrypted_vec);
+    
+    Ok(SecureSeed::new(seed_arr))
 }
 
 /// Create default accounts for Solana and Ethereum

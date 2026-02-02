@@ -88,14 +88,9 @@ export default function Dashboard() {
   }>({ isOpen: false, title: "", message: "", action: null });
 
   useEffect(() => {
-    const saved = localStorage.getItem("demo_mnemonic");
-    if (saved) {
-      try {
-        setSavedMnemonic(JSON.parse(saved));
-        setShowSecretPhrase(true); // Auto-open if we just created it (Pic 3 style)
-      } catch (e) {
-        // ignore
-      }
+    // Check if we have any lingering insecure data and clear it
+    if (localStorage.getItem("demo_mnemonic")) {
+      localStorage.removeItem("demo_mnemonic");
     }
   }, []);
 
