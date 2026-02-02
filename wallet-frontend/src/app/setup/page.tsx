@@ -64,11 +64,15 @@ export default function SetupPage() {
         toast.loading("Generating wallet...");
         const result = await createWalletMutation.mutateAsync(password);
 
+        // Fix Race Condition: Wait for wallet creation to fully propagate and auth state to settle
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
         // AUTO-CREATE ACCOUNT so dashboard isn't empty
         try {
           await createAccountMutation.mutateAsync({ chain: selectedChain });
         } catch (e) {
           console.error("Failed to auto-create account", e);
+          // Don't block flow, user can create account later
         }
 
         toast.dismiss();
@@ -205,6 +209,7 @@ export default function SetupPage() {
                   id="mnemonic_field"
                   autoComplete="off"
                   data-lpignore="true"
+                  aria-label="Secret phrase"
                   className="w-full h-14 p-4 rounded-lg border border-input bg-background text-lg placeholder:text-muted-foreground/70 shadow-sm"
                   placeholder="Enter your secret phrase (or leave blank to generate)"
                   value={mnemonicInput}
@@ -217,6 +222,7 @@ export default function SetupPage() {
                     id="wallet_password"
                     autoComplete="new-password"
                     data-lpignore="true"
+                    aria-label="Wallet password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter a secure password (min 8 chars)"
                     value={password}
@@ -225,6 +231,7 @@ export default function SetupPage() {
                   />
                   <button
                     type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground transition-colors"
                     onClick={() => setShowPassword(!showPassword)}
                   >

@@ -262,11 +262,59 @@ pub async fn get_transaction_history(
         .map_err(|e| TransactionServiceError::DatabaseError(e.to_string()))?;
 
     // Get cached transactions
-    let transactions = state
+    let mut transactions: Vec<TransactionResponse> = state
         .db
         .get_transactions(&account.id, limit, offset)
         .await
-        .map_err(|e| TransactionServiceError::DatabaseError(e.to_string()))?;
+        .map_err(|e| TransactionServiceError::DatabaseError(e.to_string()))?
+        .into_iter()
+        .map(TransactionResponse::from)
+        .collect();
 
-    Ok(transactions.into_iter().map(TransactionResponse::from).collect())
+    // Try to fetch from chain if Ethereum (best effort)
+    if chain.to_lowercase() == "ethereum" {
+        if let Ok(chain_txs) = crate::chains::ethereum::get_transaction_history(
+            &state.eth_rpc_url,
+            address,
+            limit as usize,
+        )
+        .await
+        {
+            for tx in chain_txs {
+                // Deduplicate by hash
+                if !transactions
+                    .iter()
+                    .any(|t| t.signature.to_lowercase() == tx.hash.to_lowercase())
+                {
+                    transactions.push(TransactionResponse {
+                        id: uuid::Uuid::new_v4().to_string(), // Ephemeral ID
+                        chain: "ethereum".to_string(),
+                        signature: tx.hash,
+                        tx_type: "external".to_string(),
+                        from_address: Some(tx.from),
+                        to_address: tx.to,
+                        amount: Some(tx.value),
+                        token_address: None,
+                        status: tx.status,
+                        block_number: tx.block_number.map(|b| b as i64),
+                        timestamp: tx.timestamp.map(|ts| {
+                            chrono::DateTime::from_timestamp(ts as i64, 0)
+                                .map(|dt| dt.to_rfc3339())
+                                .unwrap_or_default()
+                        }),
+                    });
+                }
+            }
+            
+            // Re-sort by timestamp descending
+            transactions.sort_by(|a, b| {
+                b.timestamp
+                    .as_deref()
+                    .unwrap_or("")
+                    .cmp(a.timestamp.as_deref().unwrap_or(""))
+            });
+        }
+    }
+
+    Ok(transactions)
 }

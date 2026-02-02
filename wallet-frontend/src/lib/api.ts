@@ -4,6 +4,10 @@
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 
+// CSRF Token Management
+let csrfToken: string | null = null;
+export const setCsrfToken = (token: string) => { csrfToken = token; };
+
 // Types
 export interface WalletStatus {
   has_wallet: boolean;
@@ -144,17 +148,31 @@ class ApiError extends Error {
 
 // Helper function
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const headers = {
+    "Content-Type": "application/json",
+    ...options?.headers,
+  } as Record<string, string>;
+
+  // Inject CSRF token for mutating requests
+  if (csrfToken && ["POST", "PUT", "DELETE", "PATCH"].includes(options?.method?.toUpperCase() || "")) {
+    headers["X-CSRF-Token"] = csrfToken;
+  }
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new ApiError(response.status, error);
+    let errorMessage = await response.text();
+    try {
+      const json = JSON.parse(errorMessage);
+      // Try to extract meaningful message
+      errorMessage = json.message || json.error || (typeof json === 'string' ? json : errorMessage);
+    } catch {
+      // Use raw text if not JSON
+    }
+    throw new ApiError(response.status, errorMessage);
   }
 
   if (response.status === 204) {
@@ -167,6 +185,8 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 // Auth API
 export const authApi = {
   getStatus: () => fetchApi<WalletStatus>("/auth/status"),
+
+  getCsrfToken: () => fetchApi<{ token: string }>("/auth/csrf"),
 
   unlock: (password: string) =>
     fetchApi<WalletStatus>("/auth/unlock", {

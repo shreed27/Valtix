@@ -26,6 +26,7 @@ pub fn create_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .route("/users/refresh", post(user_auth::refresh_token))
         // Legacy wallet auth (for backwards compatibility)
         .route("/auth/status", get(auth::status))
+        .route("/auth/csrf", get(auth::get_csrf_token))
         // Public balance queries (read-only, no auth needed)
         .route("/balances/:chain/:address", get(balance::get_balance))
         .route("/tokens/:chain/:address", get(balance::get_tokens))
@@ -96,5 +97,6 @@ pub fn create_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .merge(public_routes)
         .merge(auth_routes)
         .merge(wallet_routes)
+        .layer(axum::middleware::from_fn(api::middleware::csrf::validate_csrf))
         .layer(axum::middleware::from_fn(api::middleware::rate_limit::rate_limit_middleware))
 }
