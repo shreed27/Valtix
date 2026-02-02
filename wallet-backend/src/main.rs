@@ -65,8 +65,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| "https://ethereum-sepolia-rpc.publicnode.com".to_string());
     let cors_origin =
         std::env::var("CORS_ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
-    let jwt_secret = std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "your-super-secret-jwt-key-change-in-production".to_string());
+    let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
 
     // Create database connection pool
     let pool = SqlitePoolOptions::new()

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Trash2,
   Eye,
@@ -15,12 +16,17 @@ import {
   Menu,
   X
 } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useWalletStatus, useAccounts, useCreateAccount, useDeleteAccount, useResetWallet } from "@/hooks/useWallet";
 import { copyToClipboard } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Valtix",
+  description: "A simple and secure crypto wallet",
+};
 
 // Confirmation Dialog Component
 function ConfirmDialog({
@@ -251,7 +257,6 @@ export default function Dashboard() {
           )}
         </AnimatePresence>
       </header>
-
       {/* Secret Phrase Section - Exactly matching Screenshot */}
       <div className="border rounded-lg bg-card p-6 shadow-sm">
         <button
