@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -17,6 +17,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
         },
       })
   );
+
+  useEffect(() => {
+    // Fetch CSRF token on initialization
+    import("@/lib/api").then(async (api) => {
+      try {
+        const res = await api.authApi.getCsrfToken();
+        api.setCsrfToken(res.token);
+      } catch (e) {
+        console.error("Failed to init CSRF protection", e);
+      }
+    });
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -132,3 +132,27 @@ pub async fn reset(
         is_unlocked: false,
     }))
 }
+
+/// CSRF Token response
+#[derive(Debug, Serialize)]
+pub struct CsrfResponse {
+    pub token: String,
+}
+
+/// Generate CSRF token and set cookie
+pub async fn get_csrf_token() -> (axum::http::HeaderMap, Json<CsrfResponse>) {
+    use rand::RngCore;
+    let mut bytes = [0u8; 32];
+    rand::thread_rng().fill_bytes(&mut bytes);
+    let token = hex::encode(bytes);
+
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert(
+        axum::http::header::SET_COOKIE,
+        format!("csrf_token={}; Path=/; SameSite=Lax", token)
+            .parse()
+            .unwrap(),
+    );
+
+    (headers, Json(CsrfResponse { token }))
+}
