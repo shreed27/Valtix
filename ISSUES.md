@@ -12,10 +12,10 @@ This document lists all the critical, high, and medium priority issues identifie
 ## Phase 2: Security & Stability (High Priority)
 - [x] **Panic on Invalid Derivation Path:** The backend panics and crashes if an invalid derivation path is used.
 - [x] **Panic on Network Errors:** The backend panics when encountering unexpected data from external APIs (e.g., Solana NFT metadata).
-- [ ] **Insecure Mnemonic Storage:** The 12-word recovery phrase is stored in plaintext in `localStorage`, making it vulnerable to theft.
+- [x] **Insecure Mnemonic Storage:** The 12-word recovery phrase is stored in plaintext in `localStorage`, making it vulnerable to theft.
 - [ ] **Missing CSRF Protection:** The application is vulnerable to Cross-Site Request Forgery attacks.
-- [ ] **No API Rate Limiting:** The backend is vulnerable to brute-force and denial-of-service attacks.
-- [ ] **Unencrypted Seed Phrase in Memory:** The seed phrase is held in memory unencrypted, posing a security risk.
+- [x] **No API Rate Limiting:** The backend is vulnerable to brute-force and denial-of-service attacks.
+- [x] **Unencrypted Seed Phrase in Memory:** The seed phrase is held in memory unencrypted, posing a security risk.
 - [ ] **Incomplete Ethereum Transaction History:** The app does not display any transaction history for Ethereum accounts.
 - [ ] **Race Condition in Account Creation:** The frontend can enter a broken state where a wallet is created but the first account is not.
 - [ ] **Poor API Error Handling:** Frontend does not interpret backend errors correctly, showing generic failure messages to the user.
