@@ -2,7 +2,10 @@
 ARG DATABASE_URL="sqlite:wallet.db"
 
 # 1. Chef Stage: Cache dependencies
-FROM lukemathwalker/cargo-chef:latest-rust-1.79-slim-bookworm AS chef
+# We use rust:latest to ensure support for newer editions (like 2024) which older images might lack
+FROM rust:latest AS chef 
+# We need to install cargo-chef manually since we are using the official rust image
+RUN cargo install cargo-chef 
 WORKDIR /app
 
 # 2. Planner Stage

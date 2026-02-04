@@ -1,64 +1,72 @@
-# Deployment Guide
+# Deployment Guide & Configuration Cheat Sheet
 
-This project consists of a **Rust Backend** (using `sqlx` and SQLite) and a **Next.js Frontend**.
+This project consists of two parts that must be deployed separately but connected via environment variables.
 
-## 1. Backend Deployment (Railway Recommended)
+---
 
-Since the backend uses SQLite, it requires a **Persistent Volume** to store the database file (`wallet.db`). Most serverless platforms (like Vercel functions or AWS Lambda) have ephemeral filesystems, meaning your data would be wiped on every restart. **Railway** is recommended because it supports persistent volumes easily.
+## 🚀 Part 1: Deploy Backend (Railway)
+**Do this FIRST** because the Frontend needs the Backend URL.
 
-### Prerequisites
-- Install the `sqlx-cli` to generate offline metadata (required for building the Docker image without a live DB connection).
-  ```bash
-  cargo install sqlx-cli
-  ```
-- Run the preparation command in `wallet-backend`:
-  ```bash
-  cd wallet-backend
-  cargo sqlx prepare
-  ```
-  If this command says "no queries found", it means your project uses runtime queries (not compile-time verified), which is fine. Docker will build successfully without `sqlx-data.json` in that case.
+### 1. Create Service
+1.  Log in to [Railway](https://railway.app/).
+2.  **New Project** -> **Deploy from GitHub repo** -> Select your repo.
+3.  **IMPORTANT:** Click on the card for your service to open Settings.
+4.  Go to **Settings** -> **Root Directory**. Change it to: `/wallet-backend` (watch out for the leading slash).
 
-### Steps for Railway
-1.  **Push your code** to GitHub.
-2.  Log in to [Railway](https://railway.app/).
-3.  Click **New Project** -> **Deploy from GitHub repo**.
-4.  Select your repository.
-5.  **Configure Service**: Railway might detect the root directory. You need to configure it to look at `wallet-backend`.
-    -   Go to **Settings** -> **Root Directory** and set it to `/wallet-backend`.
-6.  **Variables**: Add the following Environment Variables:
-    -   `DATABASE_URL`: `sqlite:///app/data/wallet.db?mode=rwc` (Note the `/app/data/` path).
-    -   `JWT_SECRET`: A long random string.
-    -   `SOLANA_RPC_URL`: https://api.mainnet-beta.solana.com (or devnet).
-    -   `ETH_RPC_URL`: Your Ethereum RPC URL (e.g., from Alchemy/Infura).
-    -   `CORS_ORIGIN`: The URL of your frontend (e.g., `https://your-frontend.vercel.app`).
-    -   `PORT`: `8080`.
-7.  **Volumes** (Crucial!):
-    -   Go to **Volumes**.
-    -   Add a volume.
-    -   Mount path: `/app/data`.
-    -   This ensures `wallet.db` is stored here and persists across restarts.
+### 2. Configure Variables (Environment Mode)
+Go to the **Variables** tab and add these exactly:
 
-## 2. Frontend Deployment (Vercel Recommended)
+| Variable Name | Value to Enter (Copy & Paste) | Notes |
+| :--- | :--- | :--- |
+| `PORT` | `8080` | Required by the Dockerfile. |
+| `DATABASE_URL` | `sqlite:///app/data/wallet.db?mode=rwc` | **Exact value**. Points to the persistent volume. |
+| `JWT_SECRET` | *(Type a long random string here)* | e.g. `super-secret-key-123456789` |
+| `RUST_LOG` | `info` | Controls log verbosity. |
+| `SOLANA_RPC_URL` | `https://api.devnet.solana.com` | Use Devnet for testing. |
+| `ETH_RPC_URL` | `https://ethereum-sepolia-rpc.publicnode.com` | Use Sepolia for testing. |
+| `CORS_ORIGIN` | `https://your-frontend.vercel.app` | **Update this LATER** once you have the Vercel URL. For now, use `*` (asterisk) to allow all. |
 
-Vercel is the creators of Next.js and offers the best hosting experience.
+### 3. Add Persistent Volume (CRITICAL)
+**If you skip this, your users will lose their accounts every time the server restarts.**
+1.  Go to the **Volumes** tab.
+2.  Click **Add Volume**.
+3.  Mount Path: `/app/data`
+    *   *Why?* Because our `DATABASE_URL` points to `/app/data/wallet.db`.
 
-### Steps for Vercel
-1.  Go to [Vercel](https://vercel.com/) and create a **New Project**.
-2.  Import your GitHub repository.
-3.  **Root Directory**: Select `wallet-frontend`.
-4.  **Environment Variables**:
-    -   `NEXT_PUBLIC_API_URL`: The URL of your deployed backend (e.g., `https://web3-wallet-backend.up.railway.app/api/v1`).
-5.  Click **Deploy**.
+### 4. Deploy
+*   Railway usually auto-deploys. If not, click **Deploy**.
+*   Once active, copy the **Public Domain** (e.g., `web3-wallet.up.railway.app`). You need this for the Frontend.
 
-## 3. Post-Deployment Verification
-1.  Open your Vercel URL.
-2.  Try to create a wallet. This should send a request to your Railway backend.
-3.  The backend will create the SQLite DB file in the persistent volume on the first run (handled by the Rust code logic).
+---
 
-## Docker Local Testing
-You can build the backend image locally to verify it:
-```bash
-cd wallet-backend
-docker build -t wallet-backend .
-docker run -p 8080:8080 -v $(pwd)/wallet.db:/app/wallet.db -e DATABASE_URL=sqlite:wallet.db?mode=rwc -e JWT_SECRET=test wallet-backend
-```
+## 🚀 Part 2: Deploy Frontend (Vercel)
+
+### 1. Create Project
+1.  Log in to [Vercel](https://vercel.com/).
+2.  **Add New...** -> **Project**.
+3.  Select your git repository.
+
+### 2. Configure Build
+*   **Framework Preset:** Next.js (should be auto-detected).
+*   **Root Directory:** Click "Edit" and select `wallet-frontend`.
+
+### 3. Configure Variables
+Expand **Environment Variables** and add:
+
+| Variable Name | Value to Enter | Notes |
+| :--- | :--- | :--- |
+| `NEXT_PUBLIC_API_URL` | `https://<YOUR_RAILWAY_URL>/api/v1` | **Paste your Railway URL here**. IMPORTANT: Add `/api/v1` at the end! |
+
+### 4. Deploy
+*   Click **Deploy**.
+*   Wait for the confetti! 🎉
+
+---
+
+## 🔄 Final Connection Step
+1.  Copy your new Vercel Domain (e.g., `https://my-wallet.vercel.app`).
+2.  Go back to **Railway** -> **Variables**.
+3.  Edit `CORS_ORIGIN` and paste your Vercel URL (remove any trailing slash).
+4.  Railway will restart the backend automatically.
+
+**✅ You are now fully live!**
