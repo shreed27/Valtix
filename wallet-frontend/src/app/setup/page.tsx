@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, Key, Download, Eye, EyeOff, ArrowLeft, Copy, Check, ChevronRight } from "lucide-react";
@@ -15,7 +15,7 @@ import { copyToClipboard } from "@/lib/utils";
 
 type Step = "chain-selection" | "method-selection" | "create-password" | "show-mnemonic" | "import" | "unlock";
 
-export default function SetupPage() {
+function SetupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: status } = useWalletStatus();
@@ -352,5 +352,20 @@ export default function SetupPage() {
         </motion.div>
       </AnimatePresence>
     </div >
+  );
+}
+
+export default function SetupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground font-medium">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SetupContent />
+    </Suspense>
   );
 }
