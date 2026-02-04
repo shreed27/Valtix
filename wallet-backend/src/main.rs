@@ -64,8 +64,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| "https://api.devnet.solana.com".to_string());
     let eth_rpc_url = std::env::var("ETH_RPC_URL")
         .unwrap_or_else(|_| "https://ethereum-sepolia-rpc.publicnode.com".to_string());
-    let cors_origin =
-        std::env::var("CORS_ORIGIN").unwrap_or_else(|_| "http://localhost:3000".to_string());
+    let cors_origins_str = std::env::var("CORS_ORIGIN")
+        .unwrap_or_else(|_| "http://localhost:3000,https://valtix.vercel.app".to_string());
+    
+    let cors_origins: Vec<axum::http::HeaderValue> = cors_origins_str
+        .split(',')
+        .map(|s| s.trim().parse::<axum::http::HeaderValue>().unwrap())
+        .collect();
+
     let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
 
     // Create database connection pool
@@ -100,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Configure CORS
     let cors = CorsLayer::new()
-        .allow_origin(cors_origin.parse::<axum::http::HeaderValue>().unwrap())
+        .allow_origin(cors_origins)
         .allow_methods([
             axum::http::Method::GET,
             axum::http::Method::POST,
@@ -124,7 +130,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(state);
 
     // Start server
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+    let port = std::env::var("PORT")
+        .unwrap_or_else(|_| "8080".to_string())
+        .parse::<u16>()
+        .expect("PORT must be a valid number");
+        
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     tracing::info!("Starting server on {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
