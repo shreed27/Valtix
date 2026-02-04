@@ -25,8 +25,8 @@ This document lists all the critical, high, and medium priority issues identifie
 - [x] **Missing Database Indexes:** Certain database queries are inefficient due to missing indexes.
 - [x] **Race Condition in Database Reset:** The database reset logic can fail and leave the DB in a corrupt state.
 - [x] **No Form Input Validation:** Forms for sending funds or importing mnemonics lack proper validation.
-- [ ] **No Transaction Fee Display:** Users are not shown the estimated network fee before sending a transaction.
-- [ ] **No Balance Display on Dashboard:** The main dashboard does not show the balance for each account.
-- [ ] **Missing Settings Page:** There is no interface for users to change their password, export their wallet, or manage preferences.
-- [ ] **No Transaction History Pagination:** The app tries to load the entire transaction history at once, which is inefficient.
-- [ ] **Unoptimized NFT Image Loading:** NFT images are not optimized, leading to slow load times.
+- [x] **No Transaction Fee Display:** Users are not shown the estimated network fee before sending a transaction.
+- [x] **No Balance Display on Dashboard:** The main dashboard does not show the balance for each account.
+- [x] **Missing Settings Page:** There is no interface for users to change their password, export their wallet, or manage preferences.
+- [x] **No Transaction History Pagination:** The app tries to load the entire transaction history at once, which is inefficient.
+- [x] **Unoptimized NFT Image Loading:** NFT images are not optimized, leading to slow load times.
