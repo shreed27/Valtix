@@ -215,6 +215,12 @@ export const authApi = {
     fetchApi<WalletStatus>("/auth/reset", {
       method: "POST",
     }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    fetchApi<{ message: string }>("/users/change-password", {
+      method: "POST",
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    }),
 };
 
 // Accounts API

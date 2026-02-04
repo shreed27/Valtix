@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -21,14 +21,26 @@ export default function HistoryPage() {
   const router = useRouter();
   const { selectedAccount } = useWalletStore();
 
-  const { data: transactions, isLoading } = useQuery({
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading
+  } = useInfiniteQuery({
     queryKey: ["transactions", selectedAccount?.chain, selectedAccount?.address],
-    queryFn: () =>
+    queryFn: ({ pageParam = 0 }) =>
       selectedAccount
-        ? transactionApi.getHistory(selectedAccount.chain, selectedAccount.address)
+        ? transactionApi.getHistory(selectedAccount.chain, selectedAccount.address, 20, pageParam as number)
         : Promise.resolve([]),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === 20 ? allPages.length * 20 : undefined;
+    },
     enabled: !!selectedAccount,
   });
+
+  const transactions = data?.pages.flat() || [];
 
   const getTxIcon = (type: string) => {
     switch (type) {
@@ -68,10 +80,10 @@ export default function HistoryPage() {
             <div className="space-y-3">
               {transactions.map((tx, index) => (
                 <motion.div
-                  key={tx.id}
+                  key={tx.id || `${tx.signature}-${index}`} // Fallback key if id is missing or dup
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03 }}
+                  transition={{ delay: (index % 20) * 0.03 }}
                   className="flex items-center justify-between p-4 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors cursor-pointer"
                   onClick={() =>
                     window.open(
@@ -111,6 +123,19 @@ export default function HistoryPage() {
                   </div>
                 </motion.div>
               ))}
+
+              {hasNextPage && (
+                <div className="pt-4 text-center">
+                  <Button
+                    variant="outline"
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                    className="w-full"
+                  >
+                    {isFetchingNextPage ? "Loading more..." : "Load More"}
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-center py-12">
