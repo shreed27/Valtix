@@ -84,12 +84,17 @@ function AccountCard({
   const { data: balance, isLoading: balanceLoading } = useBalance(account.chain, account.address);
 
   return (
-    <div className="border border-border rounded-lg bg-card p-8 relative flex flex-col gap-8 shadow-sm">
+    <div className="glass-card rounded-2xl p-8 relative flex flex-col gap-8 transition-all hover:shadow-2xl hover:bg-card/70 group">
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold tracking-tight">Wallet {index + 1}</h3>
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-lg ${account.chain === 'solana' ? 'bg-gradient-to-br from-purple-500 to-indigo-600' : 'bg-gradient-to-br from-blue-500 to-cyan-600'}`}>
+            {account.chain === 'solana' ? 'SOL' : 'ETH'}
+          </div>
+          <h3 className="text-xl font-bold tracking-tight">Wallet {index + 1}</h3>
+        </div>
         <button
           type="button"
-          className="text-muted-foreground hover:text-destructive transition-colors p-2"
+          className="text-muted-foreground hover:text-destructive transition-colors p-2 rounded-full hover:bg-destructive/10"
           onClick={() => openDeleteAccountDialog(account.id, account.name)}
           disabled={deleteAccountMutation.isPending}
         >
@@ -102,38 +107,48 @@ function AccountCard({
       </div>
 
       <div className="space-y-2">
-        <div className="text-base font-bold">Balance</div>
-        <div className="font-mono text-3xl font-bold tracking-tight">
+        <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Balance</div>
+        <div className="font-mono text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-foreground to-foreground/70">
           {balanceLoading ? (
-            <span className="text-muted-foreground text-xl">Loading...</span>
+            <span className="text-muted-foreground text-2xl animate-pulse">Loading...</span>
           ) : balance ? (
             <span>
-              {formatBalance(balance.native_balance)} <span className="text-lg text-muted-foreground">{balance.native_symbol}</span>
+              {formatBalance(balance.native_balance)} <span className="text-2xl text-muted-foreground">{balance.native_symbol}</span>
             </span>
           ) : (
-            <span>0.00 <span className="text-lg text-muted-foreground">SOL</span></span>
+            <span>0.00 <span className="text-2xl text-muted-foreground">SOL</span></span>
           )}
         </div>
       </div>
 
-      <div className="space-y-2">
-        <div className="text-base font-bold">Public Key</div>
-        <div className="font-mono text-sm text-muted-foreground break-all bg-secondary/30 p-3 rounded-md">
-          {account.address}
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-2 p-4 rounded-xl bg-secondary/30 backdrop-blur-sm border border-border/50">
+          <div className="text-xs font-semibold text-muted-foreground uppercase">Public Address</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="font-mono text-sm text-foreground/80 break-all">
+              {account.address}
+            </div>
+            <button
+              onClick={() => copyToClipboard(account.address)}
+              className="p-2 hover:bg-background/50 rounded-lg transition-colors text-muted-foreground hover:text-primary"
+            >
+              <Copy className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="space-y-2">
-        <div className="text-base font-bold">Private Key</div>
-        <div className="flex items-center justify-between font-mono text-sm tracking-widest text-muted-foreground bg-secondary/30 p-3 rounded-md">
-          <span className="truncate mr-4">
-            {revealedKeys[account.id]
-              ? "PREVIEW_MODE_PRIVATE_KEY_HIDDEN" // In a real app we'd need to decrypt this
-              : "• • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •"}
-          </span>
-          <button onClick={() => togglePrivateKey(account.id)} className="hover:text-foreground shrink-0">
-            {revealedKeys[account.id] ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-          </button>
+        <div className="space-y-2 p-4 rounded-xl bg-secondary/30 backdrop-blur-sm border border-border/50">
+          <div className="text-xs font-semibold text-muted-foreground uppercase">Private Key</div>
+          <div className="flex items-center justify-between font-mono text-sm tracking-widest text-foreground/80">
+            <span className="truncate mr-4">
+              {revealedKeys[account.id]
+                ? "PREVIEW_MODE_HIDDEN"
+                : "•••••••••••••••••••••••••"}
+            </span>
+            <button onClick={() => togglePrivateKey(account.id)} className="hover:text-primary shrink-0 transition-colors">
+              {revealedKeys[account.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
       </div>
     </div>

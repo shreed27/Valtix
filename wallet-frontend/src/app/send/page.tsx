@@ -147,121 +147,142 @@ export default function SendPage() {
   }
 
   return (
-    <div className="min-h-screen container max-w-md mx-auto py-8 relative z-10">
+    <div className="min-h-screen container max-w-lg mx-auto py-12 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-500">
       <Button
         variant="ghost"
-        className="mb-4 -ml-2 hover:bg-transparent hover:text-primary"
+        className="mb-6 -ml-2 text-muted-foreground hover:text-primary transition-colors hover:bg-transparent group"
         onClick={() => router.push("/")}
       >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back
+        <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+        Back to Dashboard
       </Button>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Send className="h-5 w-5 text-primary" />
-            <CardTitle>Send {selectedAccount?.chain === "solana" ? "SOL" : "ETH"}</CardTitle>
+      <div className="glass-card rounded-2xl p-1 overflow-hidden">
+        <div className="bg-card/50 p-6 sm:p-8 rounded-xl">
+          <div className="flex items-center gap-3 mb-8">
+            <div className={`p-3 rounded-full ${selectedAccount?.chain === 'solana' ? 'bg-purple-500/10 text-purple-500' : 'bg-blue-500/10 text-blue-500'}`}>
+              <Send className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Send {selectedAccount?.chain === "solana" ? "SOL" : "ETH"}</h1>
+              <p className="text-sm text-muted-foreground">Transfer assets to another wallet</p>
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* From - Account Selector */}
-            <div>
-              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">From</label>
-              <div className="relative mt-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">From Account</label>
+              <div className="relative">
                 <button
                   type="button"
                   onClick={() => setShowAccountPicker(!showAccountPicker)}
-                  className="w-full p-4 rounded-lg bg-secondary border border-border hover:border-primary/50 transition-colors text-left flex items-center justify-between"
+                  className="w-full p-4 rounded-xl bg-secondary/50 border border-border/50 hover:bg-secondary/80 transition-all text-left flex items-center justify-between group"
                 >
-                  <div>
-                    <p className="font-medium">{selectedAccount?.name}</p>
-                    <p className="text-xs text-muted-foreground font-mono mt-1">
-                      {truncateAddress(selectedAccount?.address || "")}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-md ${selectedAccount?.chain === 'solana' ? 'bg-gradient-to-br from-purple-500 to-indigo-600' : 'bg-gradient-to-br from-blue-500 to-cyan-600'}`}>
+                      {selectedAccount?.chain === 'solana' ? 'SOL' : 'ETH'}
+                    </div>
+                    <div>
+                      <p className="font-semibold">{selectedAccount?.name}</p>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {truncateAddress(selectedAccount?.address || "")}
+                      </p>
+                    </div>
                   </div>
-                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showAccountPicker ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-300 group-hover:text-primary ${showAccountPicker ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Account Dropdown */}
                 {showAccountPicker && accounts && accounts.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-20 overflow-hidden">
-                    {accounts.map((account) => (
-                      <button
-                        key={account.id}
-                        type="button"
-                        onClick={() => {
-                          selectAccount(account);
-                          setShowAccountPicker(false);
-                        }}
-                        className={`w-full p-3 text-left hover:bg-secondary transition-colors flex items-center gap-3 ${selectedAccount?.id === account.id ? 'bg-secondary' : ''
-                          }`}
-                      >
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${account.chain === 'solana' ? 'bg-purple-500' : 'bg-blue-500'
-                          }`}>
-                          {account.chain === 'solana' ? 'SOL' : 'ETH'}
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{account.name}</p>
-                          <p className="text-xs text-muted-foreground font-mono">
-                            {truncateAddress(account.address)}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-popover border border-border rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="max-h-60 overflow-y-auto p-1">
+                      {accounts.map((account) => (
+                        <button
+                          key={account.id}
+                          type="button"
+                          onClick={() => {
+                            selectAccount(account);
+                            setShowAccountPicker(false);
+                          }}
+                          className={`w-full p-3 text-left hover:bg-secondary/80 rounded-lg transition-colors flex items-center gap-3 ${selectedAccount?.id === account.id ? 'bg-secondary' : ''
+                            }`}
+                        >
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${account.chain === 'solana' ? 'bg-purple-500' : 'bg-blue-500'
+                            }`}>
+                            {account.chain === 'solana' ? 'SOL' : 'ETH'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{account.name}</p>
+                            <p className="text-xs text-muted-foreground font-mono truncate">
+                              {truncateAddress(account.address)}
+                            </p>
+                          </div>
+                          {selectedAccount?.id === account.id && (
+                            <div className="w-2 h-2 rounded-full bg-primary" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Balance */}
-            {balance && (
-              <div className="text-sm text-right text-muted-foreground">
-                Available: <span className="text-foreground font-medium">{formatBalance(balance.native_balance)} {balance.native_symbol}</span>
-              </div>
-            )}
-
             {/* Recipient */}
-            <div>
-              <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">To</label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">To Address</label>
               <Input
-                className={`mt-2 ${errors.recipient ? "border-destructive" : ""}`}
-                placeholder="Recipient address"
+                className={`h-14 px-4 rounded-xl glass-input ${errors.recipient ? "border-destructive focus-visible:ring-destructive" : "focus-visible:ring-primary"}`}
+                placeholder={`Enter ${selectedAccount?.chain === "solana" ? "Solana" : "Ethereum"} address`}
                 {...register("recipient")}
               />
               {errors.recipient && (
-                <p className="text-sm text-destructive mt-1">{errors.recipient.message}</p>
+                <p className="text-xs text-destructive font-medium ml-1 animate-in slide-in-from-top-1">{errors.recipient.message}</p>
               )}
             </div>
 
             {/* Amount */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Amount</label>
-                <button
-                  type="button"
-                  className="text-xs text-primary hover:text-primary/80 transition-colors uppercase font-bold tracking-wide"
-                  onClick={setMaxAmount}
-                >
-                  Max
-                </button>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-muted-foreground">Amount</label>
+                {balance && (
+                  <div className="text-xs text-muted-foreground">
+                    Available: <span className="font-medium text-foreground">{formatBalance(balance.native_balance)} {balance.native_symbol}</span>
+                  </div>
+                )}
               </div>
-              <Input
-                className={`font-mono ${errors.amount ? "border-destructive" : ""}`}
-                type="number"
-                step="any"
-                placeholder="0.00"
-                {...register("amount")}
-              />
+
+              <div className="relative">
+                <Input
+                  className={`h-16 px-4 pr-20 text-2xl font-mono glass-input ${errors.amount ? "border-destructive focus-visible:ring-destructive" : "focus-visible:ring-primary"}`}
+                  type="number"
+                  step="any"
+                  placeholder="0.00"
+                  {...register("amount")}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="text-xs font-bold bg-secondary hover:bg-secondary/80 text-primary px-2 py-1 rounded transition-colors"
+                    onClick={setMaxAmount}
+                  >
+                    MAX
+                  </button>
+                  <span className="text-sm font-medium text-muted-foreground pointer-events-none">
+                    {selectedAccount?.chain === "solana" ? "SOL" : "ETH"}
+                  </span>
+                </div>
+              </div>
+
               {errors.amount && (
-                <p className="text-sm text-destructive mt-1">{errors.amount.message}</p>
+                <p className="text-xs text-destructive font-medium ml-1 animate-in slide-in-from-top-1">{errors.amount.message}</p>
               )}
 
               {/* Estimated Fee Display */}
-              <div className="flex justify-between items-center mt-3 p-3 bg-secondary/30 rounded-md text-sm">
-                <span className="text-muted-foreground">Estimated Network Fee</span>
-                <span className="font-mono">
+              <div className="flex justify-between items-center px-3 py-2 bg-secondary/30 rounded-lg text-xs mt-2">
+                <span className="text-muted-foreground">Network Fee</span>
+                <span className="font-mono text-foreground/80">
                   ~ {selectedAccount?.chain === "solana" ? "0.000005" : "0.00042"} {selectedAccount?.chain === "solana" ? "SOL" : "ETH"}
                 </span>
               </div>
@@ -269,24 +290,25 @@ export default function SendPage() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full h-12 text-base font-semibold rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all active:scale-[0.98]"
               disabled={sendMutation.isPending}
             >
               {sendMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Sending...
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Processing Transaction...
                 </>
               ) : (
                 <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Send
+                  Send {selectedAccount?.chain === "solana" ? "SOL" : "ETH"} Now
+                  <Send className="h-4 w-4 ml-2" />
                 </>
               )}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
+
 }
