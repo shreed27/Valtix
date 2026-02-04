@@ -10,12 +10,16 @@ export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = [
+    { href: "/", text: "Dashboard" },
+    { href: "/accounts", text: "Accounts" },
     { href: "/send", text: "Send" },
     { href: "/receive", text: "Receive" },
     { href: "/swap", text: "Swap" },
     { href: "/nfts", text: "NFTs" },
     { href: "/contacts", text: "Contacts" },
     { href: "/multisig", text: "Multisig" },
+    { href: "/history", text: "History" },
+    { href: "/settings", text: "Settings" },
   ];
 
   return (
