@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { toast } from "sonner";
 import * as z from "zod";
 
-import { useWalletStatus, useCreateWallet, useImportWallet, useUnlockWallet, useCreateAccount } from "@/hooks/useWallet";
+import { useWalletStatus, useCreateWallet, useImportWallet, useUnlockWallet, useCreateAccount, useResetWallet } from "@/hooks/useWallet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { copyToClipboard } from "@/lib/utils";
@@ -18,7 +18,7 @@ type Step = "chain-selection" | "method-selection" | "create-password" | "show-m
 function SetupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { data: status } = useWalletStatus();
+  const { data: status, isLoading: statusLoading } = useWalletStatus();
   // Reverting to Chain Selection first as requested
   const [step, setStep] = useState<"chain-selection" | "setup-wallet" | "unlock">("chain-selection");
   const [selectedChain, setSelectedChain] = useState<"solana" | "ethereum">("solana");
@@ -35,13 +35,50 @@ function SetupContent() {
   const createAccountMutation = useCreateAccount();
 
   useEffect(() => {
-    if (searchParams.get("unlock") === "true" && status?.has_wallet) {
-      setStep("unlock");
-    } else {
-      // Clear any stale demo state if we are setting up a new wallet
+    if (!statusLoading && status?.has_wallet) {
+      if (searchParams.get("unlock") === "true") {
+        setStep("unlock");
+      } else if (step === "chain-selection") {
+        setStep("unlock");
+      }
+    } else if (!statusLoading && !status?.has_wallet) {
       localStorage.removeItem("demo_mnemonic");
     }
-  }, [searchParams, status]);
+  }, [searchParams, status, statusLoading, step]);
+
+  if (statusLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground animate-pulse">Checking wallet...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const resetWalletMutation = useResetWallet();
+
+  const handleReset = async () => {
+    if (!confirm("Are you sure you want to reset your wallet? This will PERMANENTLY delete all your accounts and data. There is no undo!")) {
+      return;
+    }
+
+    try {
+      toast.loading("Resetting wallet...");
+      await resetWalletMutation.mutateAsync();
+      toast.dismiss();
+      toast.success("Wallet reset successfully. You can now create a new one.");
+      setError("");
+      setMnemonicInput("");
+      setPassword("");
+      setStep("chain-selection");
+    } catch (err: any) {
+      toast.dismiss();
+      toast.error(err.message || "Failed to reset wallet");
+      setError(err.message || "Failed to reset wallet");
+    }
+  };
 
   const handleChainSelect = (chain: "solana" | "ethereum") => {
     setSelectedChain(chain);
@@ -258,10 +295,26 @@ function SetupContent() {
                 </div>
 
                 {error && (
-                  <p className="text-sm text-destructive bg-destructive/10 p-4 rounded-lg flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-                    {error}
-                  </p>
+                  <div className="space-y-4">
+                    <p className="text-sm text-destructive bg-destructive/10 p-4 rounded-lg flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                      {error}
+                    </p>
+                    {error.includes("already exists") && (
+                      <div className="p-4 rounded-lg border border-border bg-card">
+                        <p className="text-sm font-medium mb-3">Would you like to start fresh?</p>
+                        <Button
+                          variant="destructive"
+                          type="button"
+                          className="w-full text-sm h-10"
+                          onClick={handleReset}
+                          disabled={resetWalletMutation.isPending}
+                        >
+                          {resetWalletMutation.isPending ? "Resetting..." : "Reset Wallet & Start Over"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 <div className="flex justify-end pt-4">
@@ -346,6 +399,15 @@ function SetupContent() {
                 >
                   {unlockMutation.isPending ? "Unlocking..." : "Unlock Wallet"}
                 </Button>
+                <div className="pt-4 text-center">
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="text-sm text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    Forgot password? Reset wallet
+                  </button>
+                </div>
               </div>
             </div>
           )}
