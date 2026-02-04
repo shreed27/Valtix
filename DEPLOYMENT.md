@@ -16,7 +16,7 @@ Since the backend uses SQLite, it requires a **Persistent Volume** to store the 
   cd wallet-backend
   cargo sqlx prepare
   ```
-  Check that `sqlx-data.json` is created. **Commit this file to git.**
+  If this command says "no queries found", it means your project uses runtime queries (not compile-time verified), which is fine. Docker will build successfully without `sqlx-data.json` in that case.
 
 ### Steps for Railway
 1.  **Push your code** to GitHub.
