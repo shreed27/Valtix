@@ -98,5 +98,5 @@ pub fn create_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .merge(auth_routes)
         .merge(wallet_routes)
         .layer(axum::middleware::from_fn(api::middleware::csrf::validate_csrf))
-        .layer(axum::middleware::from_fn(api::middleware::rate_limit::rate_limit_middleware))
+        // .layer(axum::middleware::from_fn(api::middleware::rate_limit::rate_limit_middleware))
 }
