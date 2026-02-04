@@ -13,6 +13,8 @@ import useIsMobile from "@/hooks/useIsMobile";
 
 const manrope = Manrope({ subsets: ["latin"] });
 
+import { usePathname } from "next/navigation";
+
 export default function RootLayout({
   children,
 }: {
@@ -20,6 +22,8 @@ export default function RootLayout({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
+  const pathname = usePathname();
+  const isSetupPage = pathname?.startsWith("/setup");
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -27,10 +31,10 @@ export default function RootLayout({
         <Providers>
           <AuthGuard>
             <div className="flex min-h-screen bg-background text-foreground">
-              <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
-              <div className="flex-1 flex flex-col md:ml-[250px] transition-all duration-300">
-                <Header />
-                <main className="p-6 md:p-8 max-w-7xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {!isSetupPage && <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />}
+              <div className={`flex-1 flex flex-col transition-all duration-300 ${!isSetupPage ? "md:ml-[250px]" : ""}`}>
+                {!isSetupPage && <Header />}
+                <main className={`w-full animate-in fade-in slide-in-from-bottom-4 duration-500 ${!isSetupPage ? "p-6 md:p-8 max-w-7xl mx-auto" : ""}`}>
                   {children}
                 </main>
               </div>

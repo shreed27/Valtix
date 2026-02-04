@@ -87,8 +87,7 @@ pub async fn create_wallet(
         *unlocked = Some(encrypted_mem);
     }
 
-    // Create default accounts for both chains
-    create_default_accounts(state, &wallet_id, &seed).await?;
+
 
     Ok((wallet_id, words))
 }
@@ -148,8 +147,7 @@ pub async fn import_wallet(
         *unlocked = Some(encrypted_mem);
     }
 
-    // Create default accounts for both chains
-    create_default_accounts(state, &wallet_id, &seed).await?;
+
 
     Ok(wallet_id)
 }
@@ -226,54 +224,6 @@ pub async fn get_seed(state: &Arc<AppState>) -> Result<SecureSeed, WalletService
     Ok(SecureSeed::new(seed_arr))
 }
 
-/// Create default accounts for Solana and Ethereum
-async fn create_default_accounts(
-    state: &Arc<AppState>,
-    wallet_id: &str,
-    seed: &SecureSeed,
-) -> Result<(), WalletServiceError> {
-    // Create Solana account
-    let sol_account = derive_account(seed, Chain::Solana, 0)
-        .map_err(|e| WalletServiceError::DerivationError(e.to_string()))?;
-
-    let sol_row = AccountRow::new(
-        wallet_id.to_string(),
-        "Solana Account 1".to_string(),
-        "solana".to_string(),
-        sol_account.derivation_path,
-        sol_account.derivation_index,
-        sol_account.public_key,
-        sol_account.address,
-    );
-
-    state
-        .db
-        .create_account(&sol_row)
-        .await
-        .map_err(|e| WalletServiceError::DatabaseError(e.to_string()))?;
-
-    // Create Ethereum account
-    let eth_account = derive_account(seed, Chain::Ethereum, 0)
-        .map_err(|e| WalletServiceError::DerivationError(e.to_string()))?;
-
-    let eth_row = AccountRow::new(
-        wallet_id.to_string(),
-        "Ethereum Account 1".to_string(),
-        "ethereum".to_string(),
-        eth_account.derivation_path,
-        eth_account.derivation_index,
-        eth_account.public_key,
-        eth_account.address,
-    );
-
-    state
-        .db
-        .create_account(&eth_row)
-        .await
-        .map_err(|e| WalletServiceError::DatabaseError(e.to_string()))?;
-
-    Ok(())
-}
 
 /// Derive a new account
 pub async fn derive_new_account(

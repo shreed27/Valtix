@@ -128,6 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             axum::http::header::AUTHORIZATION,
             axum::http::header::ACCEPT,
             axum::http::header::COOKIE,
+            axum::http::HeaderName::from_static("x-csrf-token"),
         ])
         .allow_credentials(true);
 
