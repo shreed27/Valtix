@@ -64,13 +64,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|_| "https://api.devnet.solana.com".to_string());
     let eth_rpc_url = std::env::var("ETH_RPC_URL")
         .unwrap_or_else(|_| "https://ethereum-sepolia-rpc.publicnode.com".to_string());
-    let cors_origins_str = std::env::var("CORS_ORIGIN")
-        .unwrap_or_else(|_| "http://localhost:3000,https://valtix.vercel.app".to_string());
+    let mut allowed_origins = vec![
+        "http://localhost:3000".parse::<axum::http::HeaderValue>().unwrap(),
+        "https://valtix.vercel.app".parse::<axum::http::HeaderValue>().unwrap(),
+    ];
+
+    if let Ok(origins_str) = std::env::var("CORS_ORIGIN") {
+        for origin in origins_str.split(',') {
+            if let Ok(val) = origin.trim().parse::<axum::http::HeaderValue>() {
+                if !allowed_origins.contains(&val) {
+                    allowed_origins.push(val);
+                }
+            }
+        }
+    }
     
-    let cors_origins: Vec<axum::http::HeaderValue> = cors_origins_str
-        .split(',')
-        .map(|s| s.trim().parse::<axum::http::HeaderValue>().unwrap())
-        .collect();
+    let cors_origins = allowed_origins;
 
     let jwt_secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
 
