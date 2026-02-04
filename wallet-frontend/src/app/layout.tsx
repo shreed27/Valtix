@@ -3,13 +3,8 @@
 import { Manrope } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import { useState } from "react";
-import Sidebar from "@/components/layout/sidebar";
 import Header from "@/components/layout/header";
 import { AuthGuard } from "@/components/auth-guard";
-import "@/components/layout/sidebar.css";
-import useIsMobile from "@/hooks/useIsMobile";
-
 
 const manrope = Manrope({ subsets: ["latin"] });
 
@@ -20,8 +15,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const isMobile = useIsMobile();
   const pathname = usePathname();
   const isSetupPage = pathname?.startsWith("/setup");
 
@@ -31,8 +24,7 @@ export default function RootLayout({
         <Providers>
           <AuthGuard>
             <div className="flex min-h-screen bg-background text-foreground">
-              {!isSetupPage && <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />}
-              <div className={`flex-1 flex flex-col transition-all duration-300 ${!isSetupPage ? "md:ml-[250px]" : ""}`}>
+              <div className="flex-1 flex flex-col">
                 {!isSetupPage && <Header />}
                 <main className={`w-full animate-in fade-in slide-in-from-bottom-4 duration-500 ${!isSetupPage ? "p-6 md:p-8 max-w-7xl mx-auto" : ""}`}>
                   {children}
