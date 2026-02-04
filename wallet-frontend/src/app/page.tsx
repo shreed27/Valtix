@@ -18,15 +18,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { useWalletStatus, useAccounts, useCreateAccount, useDeleteAccount, useResetWallet } from "@/hooks/useWallet";
-import { copyToClipboard } from "@/lib/utils";
+import { useWalletStatus, useAccounts, useCreateAccount, useDeleteAccount, useResetWallet, useBalance } from "@/hooks/useWallet";
+import { copyToClipboard, formatBalance } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Valtix",
-  description: "A simple and secure crypto wallet",
-};
+
 
 // Confirmation Dialog Component
 function ConfirmDialog({
@@ -62,6 +59,81 @@ function ConfirmDialog({
           <Button variant="destructive" onClick={onConfirm} disabled={isLoading}>
             {isLoading ? "Deleting..." : "Delete"}
           </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Account Card Component to handle individual balance fetching
+function AccountCard({
+  account,
+  index,
+  revealedKeys,
+  togglePrivateKey,
+  openDeleteAccountDialog,
+  deleteAccountMutation
+}: {
+  account: any;
+  index: number;
+  revealedKeys: Record<string, boolean>;
+  togglePrivateKey: (id: string) => void;
+  openDeleteAccountDialog: (id: string, name: string) => void;
+  deleteAccountMutation: any;
+}) {
+  const { data: balance, isLoading: balanceLoading } = useBalance(account.chain, account.address);
+
+  return (
+    <div className="border border-border rounded-lg bg-card p-8 relative flex flex-col gap-8 shadow-sm">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-bold tracking-tight">Wallet {index + 1}</h3>
+        <button
+          type="button"
+          className="text-muted-foreground hover:text-destructive transition-colors p-2"
+          onClick={() => openDeleteAccountDialog(account.id, account.name)}
+          disabled={deleteAccountMutation.isPending}
+        >
+          {deleteAccountMutation.isPending && deleteAccountMutation.variables === account.id ? (
+            <span className="h-5 w-5 block animate-spin rounded-full border-2 border-current border-t-transparent" />
+          ) : (
+            <Trash2 className="h-5 w-5" />
+          )}
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        <div className="text-base font-bold">Balance</div>
+        <div className="font-mono text-3xl font-bold tracking-tight">
+          {balanceLoading ? (
+            <span className="text-muted-foreground text-xl">Loading...</span>
+          ) : balance ? (
+            <span>
+              {formatBalance(balance.native_balance)} <span className="text-lg text-muted-foreground">{balance.native_symbol}</span>
+            </span>
+          ) : (
+            <span>0.00 <span className="text-lg text-muted-foreground">SOL</span></span>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="text-base font-bold">Public Key</div>
+        <div className="font-mono text-sm text-muted-foreground break-all bg-secondary/30 p-3 rounded-md">
+          {account.address}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="text-base font-bold">Private Key</div>
+        <div className="flex items-center justify-between font-mono text-sm tracking-widest text-muted-foreground bg-secondary/30 p-3 rounded-md">
+          <span className="truncate mr-4">
+            {revealedKeys[account.id]
+              ? "PREVIEW_MODE_PRIVATE_KEY_HIDDEN" // In a real app we'd need to decrypt this
+              : "• • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •"}
+          </span>
+          <button onClick={() => togglePrivateKey(account.id)} className="hover:text-foreground shrink-0">
+            {revealedKeys[account.id] ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+          </button>
         </div>
       </div>
     </div>
@@ -217,6 +289,7 @@ export default function Dashboard() {
             <Link href="/nfts" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">NFTs</Link>
             <Link href="/contacts" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Contacts</Link>
             <Link href="/multisig" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Multisig</Link>
+            <Link href="/settings" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Settings</Link>
           </nav>
 
           <div className="flex items-center gap-4">
@@ -248,6 +321,7 @@ export default function Dashboard() {
               <Link href="/nfts" className="text-base font-medium p-2 hover:bg-secondary rounded-md transition-colors" onClick={() => setIsMobileMenuOpen(false)}>NFTs</Link>
               <Link href="/contacts" className="text-base font-medium p-2 hover:bg-secondary rounded-md transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Contacts</Link>
               <Link href="/multisig" className="text-base font-medium p-2 hover:bg-secondary rounded-md transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Multisig</Link>
+              <Link href="/settings" className="text-base font-medium p-2 hover:bg-secondary rounded-md transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Settings</Link>
             </motion.div>
           )}
         </AnimatePresence>
@@ -314,44 +388,15 @@ export default function Dashboard() {
         </div>
 
         {solanaAccounts.map((account, index) => (
-          <div key={account.id} className="border border-border rounded-lg bg-card p-8 relative flex flex-col gap-8 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xl font-bold tracking-tight">Wallet {index + 1}</h3>
-              <button
-                type="button"
-                className="text-muted-foreground hover:text-destructive transition-colors p-2"
-                onClick={() => openDeleteAccountDialog(account.id, account.name)}
-                disabled={deleteAccountMutation.isPending}
-              >
-                {deleteAccountMutation.isPending && deleteAccountMutation.variables === account.id ? (
-                  <span className="h-5 w-5 block animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : (
-                  <Trash2 className="h-5 w-5" />
-                )}
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <div className="text-base font-bold">Public Key</div>
-              <div className="font-mono text-sm text-muted-foreground break-all">
-                {account.address}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="text-base font-bold">Private Key</div>
-              <div className="flex items-center justify-between font-mono text-sm tracking-widest text-muted-foreground">
-                <span>
-                  {revealedKeys[account.id]
-                    ? "PREVIEW_MODE_PRIVATE_KEY_HIDDEN" // In a real app we'd need to decrypt this
-                    : "• • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • • •"}
-                </span>
-                <button onClick={() => togglePrivateKey(account.id)} className="ml-4 hover:text-foreground">
-                  {revealedKeys[account.id] ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-          </div>
+          <AccountCard
+            key={account.id}
+            account={account}
+            index={index}
+            revealedKeys={revealedKeys}
+            togglePrivateKey={togglePrivateKey}
+            openDeleteAccountDialog={openDeleteAccountDialog}
+            deleteAccountMutation={deleteAccountMutation}
+          />
         ))}
         {solanaAccounts.length === 0 && (
           <div className="text-center py-12 border border-dashed border-border rounded-lg text-muted-foreground">

@@ -257,6 +257,14 @@ export default function SendPage() {
               {errors.amount && (
                 <p className="text-sm text-destructive mt-1">{errors.amount.message}</p>
               )}
+
+              {/* Estimated Fee Display */}
+              <div className="flex justify-between items-center mt-3 p-3 bg-secondary/30 rounded-md text-sm">
+                <span className="text-muted-foreground">Estimated Network Fee</span>
+                <span className="font-mono">
+                  ~ {selectedAccount?.chain === "solana" ? "0.000005" : "0.00042"} {selectedAccount?.chain === "solana" ? "SOL" : "ETH"}
+                </span>
+              </div>
             </div>
 
             <Button
